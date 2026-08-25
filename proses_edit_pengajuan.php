@@ -3,9 +3,10 @@ require_once __DIR__ . '/config/auth.php';
 require_admin();
 
 $return_row = sanitize($_POST['return_row'] ?? '');
-$return_url = sanitize($_POST['return_url'] ?? '');
+$return_url = trim($_POST['return_url'] ?? '');
 
 if (!empty($return_url)) {
+    $return_url = htmlspecialchars_decode($return_url, ENT_QUOTES);
     $parsed = parse_url($return_url);
     if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
         $return_url = 'insert_admin.php';
@@ -274,6 +275,8 @@ try {
     } else {
         $redirect_target = $return_url;
     }
+
+    $redirect_target = htmlspecialchars_decode($redirect_target, ENT_QUOTES);
 
     set_flash('success', 'Berhasil Diperbarui!', "Pengajuan #$custom_id berhasil diperbarui dan stok telah disesuaikan.");
     header("Location: $redirect_target");

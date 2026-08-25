@@ -11,7 +11,15 @@ $status_pembayaran = sanitize($_GET['status_pembayaran'] ?? '');
 $status_pengiriman = sanitize($_GET['status_pengiriman'] ?? '');
 $search = sanitize($_GET['search'] ?? '');
 $sort = sanitize($_GET['sort'] ?? 'datetime_desc');
-$current_filter_url = 'insert_admin.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+$filter_query_params = [
+    'bulan' => $bulan,
+    'tahun' => $tahun,
+    'status_pembayaran' => $status_pembayaran,
+    'status_pengiriman' => $status_pengiriman,
+    'search' => $search,
+    'sort' => $sort
+];
+$current_filter_url = 'insert_admin.php?' . http_build_query($filter_query_params);
 
 $where_clauses = ["1=1"];
 $params = [];

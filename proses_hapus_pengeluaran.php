@@ -4,9 +4,10 @@ require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
 $csrf_token = $_GET['csrf_token'] ?? '';
-$return_url = sanitize($_GET['return_url'] ?? '');
+$return_url = trim($_GET['return_url'] ?? '');
 
 if (!empty($return_url)) {
+    $return_url = htmlspecialchars_decode($return_url, ENT_QUOTES);
     $parsed = parse_url($return_url);
     if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
         $return_url = 'pengeluaran.php';

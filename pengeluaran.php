@@ -7,7 +7,7 @@ $is_admin = is_admin();
 // Filter
 $bulan = sanitize($_GET['bulan'] ?? '');
 $tahun = sanitize($_GET['tahun'] ?? date('Y'));
-$current_filter_url = 'pengeluaran.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+$current_filter_url = 'pengeluaran.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun]);
 
 $where_clauses = ["1=1"];
 $params = [];

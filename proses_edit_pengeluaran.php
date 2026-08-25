@@ -2,9 +2,10 @@
 require_once __DIR__ . '/config/auth.php';
 require_admin();
 
-$return_url = sanitize($_POST['return_url'] ?? '');
+$return_url = trim($_POST['return_url'] ?? '');
 
 if (!empty($return_url)) {
+    $return_url = htmlspecialchars_decode($return_url, ENT_QUOTES);
     $parsed = parse_url($return_url);
     if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
         $return_url = 'pengeluaran.php';
