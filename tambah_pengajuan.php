@@ -11,9 +11,6 @@ while ($row = mysqli_fetch_assoc($res_induk)) {
 
 // Ambil daftar favorit pembeli
 $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pembeli ASC");
-
-// Auto-generate ID Nota bawaan (Angka Integer Murni)
-$default_custom_id = generate_pengajuan_custom_id($conn);
 ?>
 
 <!-- Datalist Pilihan Preset Satuan -->
@@ -62,7 +59,7 @@ $default_custom_id = generate_pengajuan_custom_id($conn);
             <div class="col-6 col-md-3">
                 <div class="custom-input-box pink">
                     <label class="fw-bold text-wine small mb-1 d-block"><i class="fa-solid fa-pen text-wine me-1"></i> ID Pengajuan</label>
-                    <input type="number" step="1" name="custom_id" id="custom_id" class="form-control text-wine fw-bold" value="<?= e($default_custom_id); ?>" placeholder="Contoh: 48291" required>
+                    <input type="number" step="1" name="custom_id" id="custom_id" class="form-control text-wine fw-bold" value="" placeholder="Otomatis jika kosong">
                 </div>
             </div>
 
