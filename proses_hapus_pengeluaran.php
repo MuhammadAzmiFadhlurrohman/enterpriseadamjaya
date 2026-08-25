@@ -4,10 +4,20 @@ require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
 $csrf_token = $_GET['csrf_token'] ?? '';
+$return_url = sanitize($_GET['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'pengeluaran.php';
+    }
+} else {
+    $return_url = 'pengeluaran.php';
+}
 
 if (!verify_csrf_token($csrf_token)) {
     set_flash('error', 'Gagal', 'Token CSRF tidak valid.');
-    header('Location: pengeluaran.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -31,5 +41,5 @@ if ($id > 0) {
     set_flash('error', 'Gagal', 'ID Pengeluaran tidak valid.');
 }
 
-header('Location: pengeluaran.php');
+header("Location: $return_url");
 exit;

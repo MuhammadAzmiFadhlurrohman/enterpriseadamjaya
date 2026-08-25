@@ -7,6 +7,7 @@ $is_admin = is_admin();
 // Filter
 $bulan = sanitize($_GET['bulan'] ?? '');
 $tahun = sanitize($_GET['tahun'] ?? date('Y'));
+$current_filter_url = 'pengeluaran.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
 
 $where_clauses = ["1=1"];
 $params = [];
@@ -181,11 +182,11 @@ while ($row = mysqli_fetch_assoc($result)) {
                                     </button>
 
                                     <?php if ($is_admin): ?>
-                                        <a href="edit_pengeluaran.php?id=<?= $h['id']; ?>" class="action-btn btn-edit">
+                                        <a href="edit_pengeluaran.php?id=<?= $h['id']; ?>&return_url=<?= urlencode($current_filter_url); ?>" class="action-btn btn-edit">
                                             <i class="fa-solid fa-pen"></i> Edit
                                         </a>
                                         <a href="#" class="action-btn btn-delete" 
-                                           onclick="confirmDelete(event, 'proses_hapus_pengeluaran.php?id=<?= $h['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>')">
+                                           onclick="confirmDelete(event, 'proses_hapus_pengeluaran.php?id=<?= $h['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>&return_url=<?= urlencode($current_filter_url); ?>')">
                                             <i class="fa-solid fa-trash"></i> Hapus
                                         </a>
                                     <?php endif; ?>

@@ -4,6 +4,21 @@ require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
 $return_row = sanitize($_GET['return_row'] ?? '');
+$return_url = sanitize($_GET['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'insert_admin.php';
+    }
+} else {
+    $return_url = 'insert_admin.php';
+}
+
+$back_url = $return_url;
+if (!empty($return_row) && strpos($back_url, '#') === false) {
+    $back_url .= '#' . $return_row;
+}
 
 $stmt = mysqli_prepare($conn, "SELECT * FROM pengajuan WHERE id = ?");
 mysqli_stmt_bind_param($stmt, "i", $id);
@@ -13,7 +28,7 @@ $p = mysqli_fetch_assoc($res);
 
 if (!$p) {
     set_flash('error', 'Gagal', 'Data pengajuan tidak ditemukan.');
-    header('Location: insert_admin.php');
+    header('Location: ' . $return_url);
     exit;
 }
 
@@ -61,7 +76,7 @@ $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pemb
             <p class="page-subtitle mb-0">Perbarui rincian item, data pembeli, atau status transaksi nota ini</p>
         </div>
         <div class="header-action">
-            <a href="insert_admin.php<?= !empty($return_row) ? '#' . e($return_row) : ''; ?>" class="btn btn-outline-light btn-sm rounded-pill px-3 fw-semibold">
+            <a href="<?= e($back_url); ?>" class="btn btn-outline-light btn-sm rounded-pill px-3 fw-semibold">
                 <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Daftar
             </a>
         </div>
@@ -71,6 +86,7 @@ $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pemb
 <form action="proses_edit_pengajuan.php" method="POST" id="formEditPengajuan" enctype="multipart/form-data">
     <?= csrf_field(); ?>
     <input type="hidden" name="id" value="<?= $p['id']; ?>">
+    <input type="hidden" name="return_url" value="<?= e($return_url); ?>">
     <input type="hidden" name="return_row" value="<?= e($return_row); ?>">
     <input type="hidden" name="status_pembayaran" id="form_status_pembayaran" value="<?= e($p['status_pembayaran']); ?>">
     <input type="hidden" name="metode_pembayaran" id="selected_metode_pembayaran" value="<?= !empty($p['bukti_transfer']) ? 'transfer' : (!empty($p['bukti_tunai']) ? 'tunai' : ''); ?>">
@@ -262,7 +278,7 @@ $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pemb
 
         <!-- Tombol Aksi Bawah Item -->
         <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
-            <a href="insert_admin.php<?= !empty($return_row) ? '#' . e($return_row) : ''; ?>" class="btn btn-secondary py-2.5 px-4 fw-bold rounded-3">
+            <a href="<?= e($back_url); ?>" class="btn btn-secondary py-2.5 px-4 fw-bold rounded-3">
                 <i class="fa-solid fa-arrow-left me-1"></i> Batal & Kembali
             </a>
             <button type="button" class="btn btn-success py-2.5 px-4 fw-bold rounded-3" onclick="addItemRow()" style="background:#166D47; border:none;">

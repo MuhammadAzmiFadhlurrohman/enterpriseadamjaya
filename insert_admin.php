@@ -11,6 +11,7 @@ $status_pembayaran = sanitize($_GET['status_pembayaran'] ?? '');
 $status_pengiriman = sanitize($_GET['status_pengiriman'] ?? '');
 $search = sanitize($_GET['search'] ?? '');
 $sort = sanitize($_GET['sort'] ?? 'datetime_desc');
+$current_filter_url = 'insert_admin.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
 
 $where_clauses = ["1=1"];
 $params = [];
@@ -318,11 +319,11 @@ while ($row = mysqli_fetch_assoc($result)) {
                                     </button>
 
                                     <?php if ($is_admin): ?>
-                                        <a href="edit_pengajuan.php?id=<?= $p['id']; ?>&return_row=row-nota-<?= $p['id']; ?>" class="action-btn btn-edit">
+                                        <a href="edit_pengajuan.php?id=<?= $p['id']; ?>&return_row=row-nota-<?= $p['id']; ?>&return_url=<?= urlencode($current_filter_url); ?>" class="action-btn btn-edit">
                                             <i class="fa-solid fa-pen"></i> Edit
                                         </a>
                                         <a href="#" class="action-btn btn-delete" 
-                                           onclick="confirmDelete(event, 'proses_hapus_pengajuan.php?id=<?= $p['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>')">
+                                           onclick="confirmDelete(event, 'proses_hapus_pengajuan.php?id=<?= $p['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>&return_url=<?= urlencode($current_filter_url); ?>')">
                                             <i class="fa-solid fa-trash"></i> Hapus
                                         </a>
                                     <?php endif; ?>

@@ -2,15 +2,27 @@
 require_once __DIR__ . '/config/auth.php';
 require_admin();
 
+$return_row = sanitize($_POST['return_row'] ?? '');
+$return_url = sanitize($_POST['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'insert_admin.php';
+    }
+} else {
+    $return_url = 'insert_admin.php';
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }
 
 $csrf_token = $_POST['csrf_token'] ?? '';
 if (!verify_csrf_token($csrf_token)) {
     set_flash('error', 'Gagal', 'Token CSRF tidak valid.');
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -54,7 +66,7 @@ $p = mysqli_fetch_assoc($res_p);
 
 if (!$p) {
     set_flash('error', 'Gagal', 'Pengajuan tidak ditemukan.');
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -73,7 +85,10 @@ foreach ($_POST as $key => $val) {
 
 if (empty($item_indexes)) {
     set_flash('error', 'Gagal', 'Tidak ada item barang dalam pengajuan.');
-    header("Location: edit_pengajuan.php?id=$pengajuan_id");
+    $err_redirect = "edit_pengajuan.php?id=$pengajuan_id";
+    if (!empty($return_row)) $err_redirect .= "&return_row=" . urlencode($return_row);
+    if (!empty($return_url)) $err_redirect .= "&return_url=" . urlencode($return_url);
+    header("Location: $err_redirect");
     exit;
 }
 
@@ -247,8 +262,18 @@ try {
     mysqli_commit($conn);
     mysqli_autocommit($conn, TRUE);
 
-    $return_row = sanitize($_POST['return_row'] ?? '');
-    $redirect_target = "insert_admin.php" . (!empty($return_row) ? "?scroll_to=" . urlencode($return_row) . "#" . urlencode($return_row) : "");
+    if (!empty($return_row)) {
+        $parts = explode('#', $return_url);
+        $base_and_query = $parts[0];
+        if (strpos($base_and_query, 'scroll_to=') === false) {
+            $separator = (strpos($base_and_query, '?') !== false) ? '&' : '?';
+            $redirect_target = $base_and_query . $separator . "scroll_to=" . urlencode($return_row) . "#" . urlencode($return_row);
+        } else {
+            $redirect_target = $base_and_query . "#" . urlencode($return_row);
+        }
+    } else {
+        $redirect_target = $return_url;
+    }
 
     set_flash('success', 'Berhasil Diperbarui!', "Pengajuan #$custom_id berhasil diperbarui dan stok telah disesuaikan.");
     header("Location: $redirect_target");
@@ -259,6 +284,9 @@ try {
     mysqli_autocommit($conn, TRUE);
 
     set_flash('error', 'Update Gagal', $e->getMessage());
-    header("Location: edit_pengajuan.php?id=$pengajuan_id");
+    $err_redirect = "edit_pengajuan.php?id=$pengajuan_id";
+    if (!empty($return_row)) $err_redirect .= "&return_row=" . urlencode($return_row);
+    if (!empty($return_url)) $err_redirect .= "&return_url=" . urlencode($return_url);
+    header("Location: $err_redirect");
     exit;
 }

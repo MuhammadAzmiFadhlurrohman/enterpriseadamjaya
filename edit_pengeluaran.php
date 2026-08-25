@@ -3,6 +3,16 @@ require_once __DIR__ . '/includes/header.php';
 require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
+$return_url = sanitize($_GET['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'pengeluaran.php';
+    }
+} else {
+    $return_url = 'pengeluaran.php';
+}
 
 $stmt = mysqli_prepare($conn, "SELECT * FROM pengeluaran_header WHERE id = ?");
 mysqli_stmt_bind_param($stmt, "i", $id);
@@ -12,7 +22,7 @@ $h = mysqli_fetch_assoc($res);
 
 if (!$h) {
     set_flash('error', 'Gagal', 'Data pengeluaran tidak ditemukan.');
-    header('Location: pengeluaran.php');
+    header('Location: ' . $return_url);
     exit;
 }
 
@@ -31,7 +41,7 @@ while ($row = mysqli_fetch_assoc($res_d)) {
         <h3 class="fw-bold mb-1 text-dark">Edit Pengeluaran Kas</h3>
         <p class="text-muted mb-0">Ubah transaksi pengeluaran <strong>#<?= e($h['custom_id']); ?></strong></p>
     </div>
-    <a href="pengeluaran.php" class="btn btn-secondary-custom">
+    <a href="<?= e($return_url); ?>" class="btn btn-secondary-custom">
         <i class="fa-solid fa-arrow-left me-1"></i> Kembali
     </a>
 </div>
@@ -39,6 +49,7 @@ while ($row = mysqli_fetch_assoc($res_d)) {
 <form action="proses_edit_pengeluaran.php" method="POST" id="formEditPengeluaran">
     <?= csrf_field(); ?>
     <input type="hidden" name="id" value="<?= $h['id']; ?>">
+    <input type="hidden" name="return_url" value="<?= e($return_url); ?>">
 
     <!-- Header Transaksi -->
     <div class="glass-card p-4 mb-4">

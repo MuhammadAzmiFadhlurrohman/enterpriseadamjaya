@@ -4,10 +4,20 @@ require_admin();
 
 $id = (int)($_GET['id'] ?? 0);
 $csrf_token = $_GET['csrf_token'] ?? '';
+$return_url = sanitize($_GET['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'insert_admin.php';
+    }
+} else {
+    $return_url = 'insert_admin.php';
+}
 
 if (!verify_csrf_token($csrf_token)) {
     set_flash('error', 'Gagal', 'Token CSRF tidak valid.');
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -22,7 +32,7 @@ $p = mysqli_fetch_assoc($res_p);
 
 if (!$p) {
     set_flash('error', 'Gagal', 'Pengajuan tidak ditemukan.');
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -76,7 +86,7 @@ try {
     mysqli_autocommit($conn, TRUE);
 
     set_flash('success', 'Berhasil', "Pengajuan #$custom_id berhasil dihapus dan stok barang telah dikembalikan.");
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 
 } catch (Exception $e) {
@@ -84,6 +94,6 @@ try {
     mysqli_autocommit($conn, TRUE);
 
     set_flash('error', 'Hapus Gagal', $e->getMessage());
-    header('Location: insert_admin.php');
+    header("Location: $return_url");
     exit;
 }

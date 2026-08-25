@@ -2,15 +2,26 @@
 require_once __DIR__ . '/config/auth.php';
 require_admin();
 
+$return_url = sanitize($_POST['return_url'] ?? '');
+
+if (!empty($return_url)) {
+    $parsed = parse_url($return_url);
+    if (!empty($parsed['host']) || !empty($parsed['scheme'])) {
+        $return_url = 'pengeluaran.php';
+    }
+} else {
+    $return_url = 'pengeluaran.php';
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: pengeluaran.php');
+    header("Location: $return_url");
     exit;
 }
 
 $csrf_token = $_POST['csrf_token'] ?? '';
 if (!verify_csrf_token($csrf_token)) {
     set_flash('error', 'Gagal', 'Token CSRF tidak valid.');
-    header('Location: pengeluaran.php');
+    header("Location: $return_url");
     exit;
 }
 
@@ -28,7 +39,8 @@ foreach ($_POST as $key => $val) {
 
 if (empty($item_indexes)) {
     set_flash('error', 'Gagal', 'Tidak ada rincian item pengeluaran.');
-    header("Location: edit_pengeluaran.php?id=$id");
+    $err_redirect = "edit_pengeluaran.php?id=$id" . (!empty($return_url) ? "&return_url=" . urlencode($return_url) : "");
+    header("Location: $err_redirect");
     exit;
 }
 
@@ -86,7 +98,7 @@ try {
     mysqli_autocommit($conn, TRUE);
 
     set_flash('success', 'Berhasil', 'Transaksi pengeluaran berhasil diperbarui.');
-    header('Location: pengeluaran.php');
+    header("Location: $return_url");
     exit;
 
 } catch (Exception $e) {
@@ -94,6 +106,7 @@ try {
     mysqli_autocommit($conn, TRUE);
 
     set_flash('error', 'Gagal', $e->getMessage());
-    header("Location: edit_pengeluaran.php?id=$id");
+    $err_redirect = "edit_pengeluaran.php?id=$id" . (!empty($return_url) ? "&return_url=" . urlencode($return_url) : "");
+    header("Location: $err_redirect");
     exit;
 }
