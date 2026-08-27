@@ -127,7 +127,7 @@ try {
                 // Log audit trail
                 $ket_revert = "Pengembalian stok lama sebelum update Nota #$custom_id";
                 $stmt_log_r = mysqli_prepare($conn, "INSERT INTO riwayat_stok (jenis_id, user_id, perubahan, stok_sebelum, stok_sesudah, aksi, keterangan, tanggal) VALUES (?, ?, ?, ?, ?, 'edit', ?, NOW())");
-                mysqli_stmt_bind_param($stmt_log_r, "iiddss", $jenis_id_old, $user_id, $qty_old, $stok_prev, $stok_reverted, $ket_revert);
+                mysqli_stmt_bind_param($stmt_log_r, "iiddds", $jenis_id_old, $user_id, $qty_old, $stok_prev, $stok_reverted, $ket_revert);
                 mysqli_stmt_execute($stmt_log_r);
             }
         }
@@ -205,7 +205,7 @@ try {
             $ket_log = "Pembaruan Pengadaan Nota #$custom_id";
             $perubahan = -$jumlah;
             $stmt_log = mysqli_prepare($conn, "INSERT INTO riwayat_stok (jenis_id, user_id, perubahan, stok_sebelum, stok_sesudah, aksi, keterangan, tanggal) VALUES (?, ?, ?, ?, ?, 'edit', ?, NOW())");
-            mysqli_stmt_bind_param($stmt_log, "iiddss", $jenis_id, $user_id, $perubahan, $stok_sebelum, $stok_sesudah, $ket_log);
+            mysqli_stmt_bind_param($stmt_log, "iiddds", $jenis_id, $user_id, $perubahan, $stok_sebelum, $stok_sesudah, $ket_log);
             mysqli_stmt_execute($stmt_log);
 
             $items_to_insert[] = [

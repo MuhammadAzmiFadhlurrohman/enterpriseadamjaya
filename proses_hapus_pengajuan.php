@@ -25,7 +25,7 @@ if (!verify_csrf_token($csrf_token)) {
 $user_id = current_user()['id'];
 
 // Ambil data pengajuan
-$stmt_p = mysqli_prepare($conn, "SELECT custom_id FROM pengajuan WHERE id = ?");
+$stmt_p = mysqli_prepare($conn, "SELECT custom_id, bukti_pembelian, bukti_transfer, bukti_tunai FROM pengajuan WHERE id = ?");
 mysqli_stmt_bind_param($stmt_p, "i", $id);
 mysqli_stmt_execute($stmt_p);
 $res_p = mysqli_stmt_get_result($stmt_p);
@@ -39,23 +39,27 @@ if (!$p) {
 
 $custom_id = $p['custom_id'];
 
-// Mulai Transaction
+// Mulai Atomic Transaction
 mysqli_autocommit($conn, FALSE);
 
 try {
-    // Restorasi stok barang reguler
+    // 1. Ambil detail barang transaksi
     $stmt_old = mysqli_prepare($conn, "SELECT * FROM pengajuan_detail WHERE pengajuan_id = ?");
     mysqli_stmt_bind_param($stmt_old, "i", $id);
     mysqli_stmt_execute($stmt_old);
     $res_old = mysqli_stmt_get_result($stmt_old);
 
+    $restored_count = 0;
+    $custom_count = 0;
+
     while ($item = mysqli_fetch_assoc($res_old)) {
-        if (!$item['is_custom'] && !empty($item['jenis_id'])) {
+        // KEMBALIKAN STOK: Hanya untuk barang reguler (bukan custom) dan memiliki jenis_id valid
+        if (!$item['is_custom'] && !empty($item['jenis_id']) && (int)$item['jenis_id'] > 0) {
             $jenis_id = (int)$item['jenis_id'];
             $qty = (float)$item['jumlah'];
 
-            // Lock row FOR UPDATE
-            $stmt_l = mysqli_prepare($conn, "SELECT stok FROM jenis_barang WHERE id = ? FOR UPDATE");
+            // Lock row jenis_barang FOR UPDATE
+            $stmt_l = mysqli_prepare($conn, "SELECT stok, nama_jenis FROM jenis_barang WHERE id = ? FOR UPDATE");
             mysqli_stmt_bind_param($stmt_l, "i", $jenis_id);
             mysqli_stmt_execute($stmt_l);
             $res_l = mysqli_stmt_get_result($stmt_l);
@@ -65,28 +69,70 @@ try {
                 $stok_prev = (float)$row_l['stok'];
                 $stok_reverted = $stok_prev + $qty;
 
+                // Update stok jenis_barang (tambah kembali)
                 $stmt_r = mysqli_prepare($conn, "UPDATE jenis_barang SET stok = ? WHERE id = ?");
                 mysqli_stmt_bind_param($stmt_r, "di", $stok_reverted, $jenis_id);
-                mysqli_stmt_execute($stmt_r);
+                if (!mysqli_stmt_execute($stmt_r)) {
+                    throw new Exception("Gagal mengembalikan stok varian #$jenis_id.");
+                }
 
-                // Log audit trail
-                $ket_revert = "Pengembalian stok dari pembatalan/penghapusan pengajuan #$custom_id";
+                // Log audit trail ke riwayat_stok
+                $ket_revert = "Pengembalian stok dari penghapusan transaksi Nota #$custom_id";
                 $stmt_log_r = mysqli_prepare($conn, "INSERT INTO riwayat_stok (jenis_id, user_id, perubahan, stok_sebelum, stok_sesudah, aksi, keterangan, tanggal) VALUES (?, ?, ?, ?, ?, 'hapus', ?, NOW())");
-                mysqli_stmt_bind_param($stmt_log_r, "iiddss", $jenis_id, $user_id, $qty, $stok_prev, $stok_reverted, $ket_revert);
+                mysqli_stmt_bind_param($stmt_log_r, "iiddds", $jenis_id, $user_id, $qty, $stok_prev, $stok_reverted, $ket_revert);
                 mysqli_stmt_execute($stmt_log_r);
+
+                $restored_count++;
             }
+        } else {
+            // Barang custom: stok tidak dikembalikan (karena tidak terdaftar dalam master inventory)
+            $custom_count++;
         }
     }
 
-    // Hapus pengajuan (detail terhapus otomatis via CASCADE)
+    // 2. Hapus riwayat cicilan jika ada
+    $stmt_del_cicilan = mysqli_prepare($conn, "DELETE FROM riwayat_cicilan WHERE pengajuan_id = ?");
+    if ($stmt_del_cicilan) {
+        mysqli_stmt_bind_param($stmt_del_cicilan, "i", $id);
+        mysqli_stmt_execute($stmt_del_cicilan);
+    }
+
+    // 3. Hapus pengajuan detail
+    $stmt_del_det = mysqli_prepare($conn, "DELETE FROM pengajuan_detail WHERE pengajuan_id = ?");
+    if ($stmt_del_det) {
+        mysqli_stmt_bind_param($stmt_del_det, "i", $id);
+        mysqli_stmt_execute($stmt_del_det);
+    }
+
+    // 4. Hapus data transaksi pengajuan induk
     $stmt_del = mysqli_prepare($conn, "DELETE FROM pengajuan WHERE id = ?");
     mysqli_stmt_bind_param($stmt_del, "i", $id);
     mysqli_stmt_execute($stmt_del);
 
+    // 5. Hapus berkas fisik bukti pembayaran jika ada
+    $bukti_fields = ['bukti_pembelian', 'bukti_transfer', 'bukti_tunai'];
+    foreach ($bukti_fields as $bfield) {
+        if (!empty($p[$bfield])) {
+            $fpath = __DIR__ . '/' . ltrim($p[$bfield], '/\\');
+            if (file_exists($fpath) && is_file($fpath)) {
+                @unlink($fpath);
+            }
+        }
+    }
+
+    // Commit Transaction
     mysqli_commit($conn);
     mysqli_autocommit($conn, TRUE);
 
-    set_flash('success', 'Berhasil', "Pengajuan #$custom_id berhasil dihapus dan stok barang telah dikembalikan.");
+    $msg = "Transaksi Nota #$custom_id berhasil dihapus.";
+    if ($restored_count > 0) {
+        $msg .= " Stok untuk $restored_count varian barang reguler telah otomatis dikembalikan.";
+    }
+    if ($custom_count > 0) {
+        $msg .= " ($custom_count barang custom tidak mempengaruhi stok).";
+    }
+
+    set_flash('success', 'Berhasil', $msg);
     header("Location: $return_url");
     exit;
 
