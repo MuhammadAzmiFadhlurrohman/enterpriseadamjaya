@@ -11,6 +11,10 @@ while ($row = mysqli_fetch_assoc($res_induk)) {
 
 // Ambil daftar favorit pembeli
 $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pembeli ASC");
+$favorit_list = [];
+while ($f = mysqli_fetch_assoc($res_fav)) {
+    $favorit_list[] = $f;
+}
 ?>
 
 <!-- Datalist Pilihan Preset Satuan -->
@@ -105,15 +109,50 @@ $res_fav = mysqli_query($conn, "SELECT * FROM favorit_pembeli ORDER BY nama_pemb
             </button>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label text-muted small fw-semibold">Pilih Pembeli Tersimpan</label>
-            <select id="select_favorit" class="form-select" onchange="applyFavorit(this)">
+        <div class="mb-3 position-relative" id="favorit_search_container">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label text-muted small fw-semibold mb-0">
+                    <i class="fa-solid fa-address-book text-wine me-1"></i> Pilih Pembeli Tersimpan
+                </label>
+                <small class="text-muted fw-semibold" id="favorit_count_badge" style="font-size:0.75rem;">
+                    <i class="fa-solid fa-users text-gold me-1"></i> <span id="favorit_total_count"><?= count($favorit_list); ?></span> pembeli tersimpan
+                </small>
+            </div>
+
+            <!-- Custom Searchable Combobox -->
+            <div class="input-group shadow-sm rounded-3">
+                <span class="input-group-text bg-white border-end-0 text-muted px-3">
+                    <i class="fa-solid fa-magnifying-glass text-wine"></i>
+                </span>
+                <input type="text" id="search_favorit_input" class="form-control border-start-0 border-end-0 ps-1 fw-semibold" 
+                       placeholder="Ketik untuk mencari nama atau nomor telepon pembeli..." 
+                       autocomplete="off" 
+                       onfocus="showFavoritDropdown()" 
+                       oninput="filterFavoritLive(this.value)">
+                <button type="button" class="btn btn-white bg-white border-start-0 border-end-0 text-muted" 
+                        id="btnClearFavoritSearch" onclick="resetFavoritSearch()" style="display:none;" title="Bersihkan pencarian">
+                    <i class="fa-solid fa-circle-xmark text-muted"></i>
+                </button>
+                <button type="button" class="btn btn-light border px-3" 
+                        onclick="toggleFavoritDropdown()" title="Tampilkan semua pembeli tersimpan">
+                    <i class="fa-solid fa-chevron-down small text-muted"></i>
+                </button>
+            </div>
+
+            <!-- Dropdown List Hasil Pencarian -->
+            <div id="favorit_dropdown_menu" class="dropdown-menu w-100 shadow-lg border-0 mt-1 p-1 rounded-3" 
+                 style="display:none; max-height: 280px; overflow-y: auto; z-index: 1060; position: absolute; top: 100%; left: 0; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+                <!-- Diisi via JS -->
+            </div>
+
+            <!-- Hidden native select for fallback compatibility -->
+            <select id="select_favorit" class="d-none" onchange="applyFavorit(this)">
                 <option value="">-- Pilih pembeli yang sudah disimpan --</option>
-                <?php while ($f = mysqli_fetch_assoc($res_fav)): ?>
+                <?php foreach ($favorit_list as $f): ?>
                     <option value="<?= $f['id']; ?>" data-nama="<?= e($f['nama_pembeli']); ?>" data-telepon="<?= e($f['telepon_pembeli']); ?>">
                         <?= e($f['nama_pembeli']); ?>
                     </option>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </select>
         </div>
 
@@ -379,7 +418,151 @@ window.formatRupiahInput = formatRupiahInput;
 
 let rowIndexCounter = 1;
 const barangIndukList = <?= json_encode($barang_induk_list); ?>;
+let favoritList = <?= json_encode($favorit_list); ?>;
 let searchTimeout = null;
+
+// ==========================================
+// FITUR SEARCH & FILTER PEMBELI TERSIMPAN
+// ==========================================
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderFavoritDropdown(items) {
+    const dropdown = document.getElementById('favorit_dropdown_menu');
+    if (!dropdown) return;
+    
+    if (!items || items.length === 0) {
+        dropdown.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+                <i class="fa-solid fa-user-slash text-warning me-1"></i> Tidak ditemukan pembeli tersimpan yang cocok.
+            </div>`;
+        return;
+    }
+    
+    let html = `<div class="dropdown-header small fw-bold text-wine text-uppercase py-1.5 px-3 border-bottom d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-address-book me-1"></i> Pembeli Tersimpan</span>
+        <span class="badge bg-light text-wine">${items.length} hasil</span>
+    </div>`;
+    
+    items.forEach(f => {
+        const initial = (f.nama_pembeli || 'P').trim().charAt(0).toUpperCase();
+        const namaEsc = escapeHtml(f.nama_pembeli || '');
+        const telpEsc = escapeHtml(f.telepon_pembeli || '');
+        
+        html += `
+        <button type="button" class="dropdown-item py-2 px-3 border-bottom d-flex justify-content-between align-items-center text-wrap" 
+                onclick="selectFavoritBuyer(${f.id})" style="transition: background 0.15s ease; cursor: pointer;">
+            <div class="d-flex align-items-center gap-2.5">
+                <div style="width:34px; height:34px; border-radius:50%; background:#FDF5F6; color:#7A1E33; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; border:1px solid #F5D5DA; flex-shrink: 0;">
+                    ${initial}
+                </div>
+                <div class="text-start">
+                    <strong class="text-dark d-block text-truncate" style="max-width: 300px; font-size: 0.9rem;">${namaEsc}</strong>
+                    ${telpEsc ? `<small class="text-muted d-flex align-items-center gap-1" style="font-size:0.75rem;"><i class="fa-solid fa-phone text-success" style="font-size:0.65rem;"></i> +62 ${telpEsc}</small>` : '<small class="text-muted fst-italic" style="font-size:0.75rem;">Tanpa nomor telepon</small>'}
+                </div>
+            </div>
+            <span class="badge rounded-pill px-2.5 py-1" style="background:#FAF6EE; color:#C9973E; border:1px solid #E8D5A0; font-size:0.72rem; font-weight:600;">
+                <i class="fa-solid fa-check me-1"></i> Pilih
+            </span>
+        </button>`;
+    });
+    
+    dropdown.innerHTML = html;
+}
+
+function showFavoritDropdown() {
+    const dropdown = document.getElementById('favorit_dropdown_menu');
+    if (dropdown) {
+        const query = (document.getElementById('search_favorit_input').value || '').trim();
+        filterFavoritLive(query);
+        dropdown.style.display = 'block';
+        dropdown.classList.add('show');
+    }
+}
+
+function hideFavoritDropdown() {
+    const dropdown = document.getElementById('favorit_dropdown_menu');
+    if (dropdown) {
+        dropdown.style.display = 'none';
+        dropdown.classList.remove('show');
+    }
+}
+
+function toggleFavoritDropdown() {
+    const dropdown = document.getElementById('favorit_dropdown_menu');
+    if (dropdown && dropdown.style.display === 'block') {
+        hideFavoritDropdown();
+    } else {
+        const input = document.getElementById('search_favorit_input');
+        if (input) input.focus();
+        showFavoritDropdown();
+    }
+}
+
+function filterFavoritLive(query) {
+    const q = (query || '').trim().toLowerCase();
+    let filtered = favoritList;
+    if (q) {
+        filtered = favoritList.filter(f => {
+            const nama = (f.nama_pembeli || '').toLowerCase();
+            const telp = (f.telepon_pembeli || '').toLowerCase();
+            return nama.includes(q) || telp.includes(q);
+        });
+    }
+    renderFavoritDropdown(filtered);
+    
+    const btnClear = document.getElementById('btnClearFavoritSearch');
+    if (btnClear) {
+        btnClear.style.display = query ? 'inline-block' : 'none';
+    }
+}
+
+function selectFavoritBuyer(id) {
+    const buyer = favoritList.find(f => f.id == id);
+    if (!buyer) return;
+    
+    const namaInput = document.getElementById('nama_pembeli');
+    const telpInput = document.getElementById('telepon_pembeli');
+    const searchInput = document.getElementById('search_favorit_input');
+    const btnClear = document.getElementById('btnClearFavoritSearch');
+    const selectFav = document.getElementById('select_favorit');
+    
+    if (namaInput) namaInput.value = buyer.nama_pembeli || '';
+    if (telpInput) telpInput.value = buyer.telepon_pembeli || '';
+    if (searchInput) searchInput.value = buyer.nama_pembeli || '';
+    if (btnClear) btnClear.style.display = 'inline-block';
+    if (selectFav) selectFav.value = buyer.id;
+    
+    hideFavoritDropdown();
+    
+    if (namaInput) {
+        namaInput.classList.add('is-valid');
+        setTimeout(() => namaInput.classList.remove('is-valid'), 1500);
+    }
+}
+
+function resetFavoritSearch() {
+    const searchInput = document.getElementById('search_favorit_input');
+    const btnClear = document.getElementById('btnClearFavoritSearch');
+    const selectFav = document.getElementById('select_favorit');
+    
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+    if (btnClear) btnClear.style.display = 'none';
+    if (selectFav) selectFav.value = '';
+    
+    filterFavoritLive('');
+    showFavoritDropdown();
+}
 
 function saveAsFavorit(event) {
     if (event) event.preventDefault();
@@ -421,17 +604,21 @@ function saveAsFavorit(event) {
         }
 
         if (data.status === 'success') {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Tersimpan!',
-                    text: data.message || 'Data pembeli berhasil disimpan ke Favorit!',
-                    timer: 1800,
-                    showConfirmButton: false
-                });
+            // Update array favoritList
+            const newBuyer = {
+                id: data.id,
+                nama_pembeli: data.nama_pembeli,
+                telepon_pembeli: data.telepon_pembeli
+            };
+            const existingIdx = favoritList.findIndex(f => f.id == data.id);
+            if (existingIdx >= 0) {
+                favoritList[existingIdx] = newBuyer;
             } else {
-                alert(data.message || 'Data pembeli berhasil disimpan ke Favorit!');
+                favoritList.unshift(newBuyer);
             }
+            
+            const badgeCount = document.getElementById('favorit_total_count');
+            if (badgeCount) badgeCount.innerText = favoritList.length;
             
             // Tambahkan ke dropdown select_favorit jika belum ada
             const selectFav = document.getElementById('select_favorit');
@@ -453,6 +640,21 @@ function saveAsFavorit(event) {
                     newOpt.selected = true;
                     selectFav.appendChild(newOpt);
                 }
+            }
+
+            // Auto-select buyer
+            selectFavoritBuyer(data.id);
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tersimpan!',
+                    text: data.message || 'Data pembeli berhasil disimpan ke Favorit!',
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+            } else {
+                alert(data.message || 'Data pembeli berhasil disimpan ke Favorit!');
             }
         } else {
             if (typeof Swal !== 'undefined') {
@@ -519,6 +721,12 @@ document.addEventListener("click", function(e) {
     const input = document.getElementById("search_item_input");
     if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
         hideSearchDropdown();
+    }
+
+    const favDropdown = document.getElementById("favorit_dropdown_menu");
+    const favContainer = document.getElementById("favorit_search_container");
+    if (favDropdown && favContainer && !favContainer.contains(e.target)) {
+        hideFavoritDropdown();
     }
 });
 
