@@ -85,7 +85,7 @@ if ($barang_id > 0) {
 
             <div class="mb-3">
                 <label class="form-label text-muted small fw-bold">Harga Standar Satuan (Rp) *</label>
-                <input type="text" name="harga" class="form-control form-control-lg fs-6 fw-semibold rupiah-input" placeholder="Contoh: 1250000" onkeyup="formatRupiahInput(this)" required>
+                <input type="text" name="harga" class="form-control form-control-lg fs-6 fw-semibold rupiah-input" placeholder="Contoh: 1250000" oninput="formatRupiahInput(this)" onkeyup="formatRupiahInput(this)" required>
             </div>
 
             <button type="submit" class="btn text-white w-100 py-2.5 fw-bold rounded-3 shadow-sm fs-6" style="background: linear-gradient(135deg, #7A1E33 0%, #5A1224 100%); border: none;">
@@ -284,7 +284,7 @@ if ($barang_id > 0) {
                     </div>
                     <div class="mb-3 mt-3">
                         <label class="form-label text-muted small fw-semibold">HARGA STANDAR SATUAN (RP)</label>
-                        <input type="text" name="harga" class="form-control rupiah-input" placeholder="Rp 0" required>
+                        <input type="text" name="harga" class="form-control rupiah-input" placeholder="Rp 0" oninput="formatRupiahInput(this)" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -334,7 +334,7 @@ if ($barang_id > 0) {
                     </div>
                     <div class="mb-3 mt-3">
                         <label class="form-label text-muted small fw-semibold">HARGA STANDAR SATUAN (RP)</label>
-                        <input type="text" name="harga" id="edit_j_harga" class="form-control rupiah-input" required>
+                        <input type="text" name="harga" id="edit_j_harga" class="form-control rupiah-input" oninput="formatRupiahInput(this)" required>
                     </div>
                 </div>
                 <div class="modal-footer">

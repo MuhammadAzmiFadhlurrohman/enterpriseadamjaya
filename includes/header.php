@@ -28,51 +28,77 @@ $initial_letter = strtoupper(substr($user['username'], 0, 1));
     <script>
         function formatRupiahJS(angka, prefix = 'Rp ') {
             if (angka === null || angka === undefined || angka === '') return '';
-            let strVal = angka.toString().trim();
-            if (strVal.includes('.')) {
-                let parts = strVal.split('.');
-                if (parts[1] === '0' || parts[1] === '00' || parts[1] === '000') {
-                    strVal = parts[0];
+            
+            if (typeof angka === 'number') {
+                if (isNaN(angka)) return '';
+                let parts = String(angka).split('.');
+                let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
+                return prefix ? prefix + intPart + decPart : intPart + decPart;
+            }
+
+            let strVal = String(angka).trim();
+            if (strVal === '') return '';
+
+            // Handle pure MySQL decimal strings like "100000.00" or "50.50" (only if numeric float, no Rp, no comma)
+            if (/^-?\d+\.\d+$/.test(strVal) && !strVal.startsWith('Rp') && !strVal.includes(',')) {
+                let num = parseFloat(strVal);
+                if (!isNaN(num)) {
+                    let parts = String(num).split('.');
+                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
+                    return prefix ? prefix + intPart + decPart : intPart + decPart;
                 }
             }
-            let number_string = strVal.replace(/[^,\d]/g, ''),
-                split = number_string.split(','),
-                sisa = split[0].length % 3,
-                rupiah = split[0].substr(0, sisa),
-                ribuan = split[0].substr(sisa).match(/\d{3}/gi);
 
-            if (ribuan) {
-                let separator = sisa ? '.' : '';
-                rupiah += separator + ribuan.join('.');
+            // Live input or formatted string: strip non-digits except comma
+            let clean = strVal.replace(/[^0-9,]/g, '');
+            if (!clean) return '';
+
+            let split = clean.split(',');
+            let intPart = split[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            let decPart = split[1] !== undefined ? ',' + split[1] : '';
+            let result = intPart ? intPart + decPart : '';
+            return prefix ? (result ? prefix + result : '') : result;
+        }
+
+        function unformatRupiah(str) {
+            if (str === null || str === undefined || str === '') return 0;
+            if (typeof str === 'number') return str;
+            let s = String(str).trim();
+            if (s === '') return 0;
+
+            if (/^-?\d+\.\d+$/.test(s) && !s.includes(',') && !s.startsWith('Rp')) {
+                return parseFloat(s) || 0;
             }
 
-            rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
-            return prefix ? (rupiah ? 'Rp ' + rupiah : '') : rupiah;
-        }
-        function unformatRupiah(str) {
-            if (!str) return 0;
-            let cleaned = str.toString().replace(/[^0-9,-]/g, '').replace(',', '.');
+            let cleaned = s.replace(/[^0-9,-]/g, '').replace(',', '.');
             return parseFloat(cleaned) || 0;
         }
+
         function unformatRupiahJS(str) {
             return unformatRupiah(str);
         }
+
         function formatRupiah(num) {
             return formatRupiahJS(num, 'Rp ');
         }
+
         function formatRupiahInput(input) {
             if (!input) return;
             let val = input.value;
-            if (typeof formatRupiahJS === 'function') {
-                input.value = formatRupiahJS(val, 'Rp ');
-            } else {
-                let clean = val.toString().replace(/[^\d]/g, '');
-                input.value = clean ? 'Rp ' + parseInt(clean, 10).toLocaleString('id-ID') : '';
+            let clean = String(val).replace(/\D/g, '');
+            if (!clean) {
+                input.value = '';
+                return;
             }
+            input.value = 'Rp ' + clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
+
         window.unformatRupiah = unformatRupiah;
         window.unformatRupiahJS = unformatRupiah;
         window.formatRupiah = formatRupiah;
+        window.formatRupiahJS = formatRupiahJS;
         window.formatRupiahInput = formatRupiahInput;
     </script>
 </head>

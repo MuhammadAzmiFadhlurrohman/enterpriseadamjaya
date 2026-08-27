@@ -217,54 +217,77 @@ function submitKwitansiModal(e, id) {
  */
 function formatRupiahJS(angka, prefix = 'Rp ') {
   if (angka === null || angka === undefined || angka === '') return '';
-  let strVal = angka.toString().trim();
-  if (strVal.includes('.')) {
-    let parts = strVal.split('.');
-    if (parts[1] === '0' || parts[1] === '00' || parts[1] === '000') {
-      strVal = parts[0];
+  
+  if (typeof angka === 'number') {
+    if (isNaN(angka)) return '';
+    let parts = String(angka).split('.');
+    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
+    return prefix ? prefix + intPart + decPart : intPart + decPart;
+  }
+
+  let strVal = String(angka).trim();
+  if (strVal === '') return '';
+
+  // Handle pure MySQL decimal strings like "100000.00" or "50.50" (only if numeric float, no Rp, no comma)
+  if (/^-?\d+\.\d+$/.test(strVal) && !strVal.startsWith('Rp') && !strVal.includes(',')) {
+    let num = parseFloat(strVal);
+    if (!isNaN(num)) {
+      let parts = String(num).split('.');
+      let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
+      return prefix ? prefix + intPart + decPart : intPart + decPart;
     }
   }
-  let number_string = strVal.replace(/[^,\d]/g, ''),
-    split = number_string.split(','),
-    sisa = split[0].length % 3,
-    rupiah = split[0].substr(0, sisa),
-    ribuan = split[0].substr(sisa).match(/\d{3}/gi);
 
-  if (ribuan) {
-    let separator = sisa ? '.' : '';
-    rupiah += separator + ribuan.join('.');
-  }
+  // Live input or formatted string: strip non-digits except comma
+  let clean = strVal.replace(/[^0-9,]/g, '');
+  if (!clean) return '';
 
-  rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
-  return prefix ? (rupiah ? 'Rp ' + rupiah : '') : rupiah;
+  let split = clean.split(',');
+  let intPart = split[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  let decPart = split[1] !== undefined ? ',' + split[1] : '';
+  let result = intPart ? intPart + decPart : '';
+  return prefix ? (result ? prefix + result : '') : result;
 }
 
 /**
  * Unformat Rupiah JS to Float
  */
 function unformatRupiahJS(rupiahStr) {
-  if (!rupiahStr) return 0;
-  let cleaned = rupiahStr.toString().replace(/[^0-9,-]/g, '').replace(',', '.');
+  if (rupiahStr === null || rupiahStr === undefined || rupiahStr === '') return 0;
+  if (typeof rupiahStr === 'number') return rupiahStr;
+  let s = String(rupiahStr).trim();
+  if (s === '') return 0;
+
+  if (/^-?\d+\.\d+$/.test(s) && !s.includes(',') && !s.startsWith('Rp')) {
+    return parseFloat(s) || 0;
+  }
+
+  let cleaned = s.replace(/[^0-9,-]/g, '').replace(',', '.');
   return parseFloat(cleaned) || 0;
 }
 
 function formatRupiahInput(input) {
   if (!input) return;
   let val = input.value;
-  if (typeof formatRupiahJS === 'function') {
-    input.value = formatRupiahJS(val, 'Rp ');
-  } else {
-    let clean = val.toString().replace(/[^\d]/g, '');
-    input.value = clean ? 'Rp ' + parseInt(clean, 10).toLocaleString('id-ID') : '';
+  let clean = String(val).replace(/\D/g, '');
+  if (!clean) {
+    input.value = '';
+    return;
   }
+  input.value = 'Rp ' + clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // Global Alias Compatibility
 window.unformatRupiah = unformatRupiahJS;
 window.unformatRupiahJS = unformatRupiahJS;
 window.formatRupiahInput = formatRupiahInput;
-if (typeof formatRupiahJS === 'function') {
-  window.formatRupiah = function(num) { return formatRupiahJS(num, 'Rp '); };
+window.formatRupiahJS = formatRupiahJS;
+window.formatRupiah = function(num) { return formatRupiahJS(num, 'Rp '); };
+
+function onRupiahInputMask() {
+  formatRupiahInput(this);
 }
 
 /**
@@ -272,9 +295,8 @@ if (typeof formatRupiahJS === 'function') {
  */
 function initRupiahMasking() {
   document.querySelectorAll('.rupiah-input').forEach(function (input) {
-    input.addEventListener('keyup', function (e) {
-      this.value = formatRupiahJS(this.value, 'Rp ');
-    });
+    input.removeEventListener('input', onRupiahInputMask);
+    input.addEventListener('input', onRupiahInputMask);
   });
 }
 
