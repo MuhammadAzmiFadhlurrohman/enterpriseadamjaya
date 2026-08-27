@@ -431,7 +431,7 @@ function renderFavoritDropdown(items) {
     
     let html = `<div class="dropdown-header small fw-bold text-wine text-uppercase py-1.5 px-3 border-bottom d-flex justify-content-between align-items-center">
         <span><i class="fa-solid fa-address-book me-1"></i> Pembeli Tersimpan</span>
-        <span class="badge bg-light text-wine">${items.length} hasil</span>
+        <span class="badge rounded-pill px-2.5 py-1" style="background:#FDF5F6; color:#7A1E33; border:1px solid #F5D5DA; font-weight:700; font-size:0.75rem;">${items.length} hasil</span>
     </div>`;
     
     items.forEach(f => {
