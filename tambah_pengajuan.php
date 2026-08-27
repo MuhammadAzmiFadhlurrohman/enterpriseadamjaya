@@ -297,23 +297,23 @@ while ($f = mysqli_fetch_assoc($res_fav)) {
 
         <!-- Status Pelunasan Option Cards -->
         <label class="form-label text-muted small fw-semibold mb-2">Status Pelunasan Nota *</label>
-        <div class="row g-2 mb-3">
+        <div class="row g-2 mb-3 align-items-stretch">
             <div class="col-4">
-                <div class="status-pay-card text-center p-3 rounded-3 border bg-light text-dark" id="card_status_belum" onclick="selectFormStatusBayar('belum_dibayar')">
-                    <i class="fa-solid fa-circle-xmark text-danger fs-3 mb-1.5 d-block"></i>
-                    <span class="fw-bold text-dark d-block small">Belum Dibayar</span>
+                <div class="status-pay-card h-100 text-center p-2.5 p-sm-3 rounded-3 border bg-light text-dark d-flex flex-column justify-content-center align-items-center" id="card_status_belum" onclick="selectFormStatusBayar('belum_dibayar')">
+                    <i class="fa-solid fa-circle-xmark text-danger fs-4 mb-1.5 d-block"></i>
+                    <span class="status-pay-label fw-bold text-dark d-block">Belum Dibayar</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="status-pay-card text-center p-3 rounded-3 border bg-light text-dark" id="card_status_cicilan" onclick="selectFormStatusBayar('cicilan')">
-                    <i class="fa-solid fa-clock-rotate-left text-warning fs-3 mb-1.5 d-block"></i>
-                    <span class="fw-bold text-dark d-block small">Cicilan / DP</span>
+                <div class="status-pay-card h-100 text-center p-2.5 p-sm-3 rounded-3 border bg-light text-dark d-flex flex-column justify-content-center align-items-center" id="card_status_cicilan" onclick="selectFormStatusBayar('cicilan')">
+                    <i class="fa-solid fa-clock-rotate-left text-warning fs-4 mb-1.5 d-block"></i>
+                    <span class="status-pay-label fw-bold text-dark d-block">Cicilan / DP</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="status-pay-card text-center p-3 rounded-3 border bg-light text-dark" id="card_status_lunas" onclick="selectFormStatusBayar('dibayar')">
-                    <i class="fa-solid fa-circle-check text-success fs-3 mb-1.5 d-block"></i>
-                    <span class="fw-bold text-dark d-block small">Lunas</span>
+                <div class="status-pay-card h-100 text-center p-2.5 p-sm-3 rounded-3 border bg-light text-dark d-flex flex-column justify-content-center align-items-center" id="card_status_lunas" onclick="selectFormStatusBayar('dibayar')">
+                    <i class="fa-solid fa-circle-check text-success fs-4 mb-1.5 d-block"></i>
+                    <span class="status-pay-label fw-bold text-dark d-block">Lunas</span>
                 </div>
             </div>
         </div>

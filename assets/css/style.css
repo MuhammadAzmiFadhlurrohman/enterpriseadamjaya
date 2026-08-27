@@ -2551,6 +2551,10 @@ body.login-body {
     transition: all 0.2s ease-in-out;
 }
 
+.status-pay-card {
+    min-height: 82px;
+}
+
 .status-pay-card *,
 .payment-card-btn * {
     cursor: pointer !important;
@@ -2560,4 +2564,26 @@ body.login-body {
 .payment-card-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.status-pay-label {
+    font-size: 0.82rem;
+    line-height: 1.2;
+    text-align: center;
+}
+
+@media (max-width: 576px) {
+    .status-pay-card {
+        padding: 10px 4px !important;
+        min-height: 76px;
+    }
+    .status-pay-card i {
+        font-size: 1.35rem !important;
+        margin-bottom: 4px !important;
+    }
+    .status-pay-label {
+        font-size: 0.72rem;
+        letter-spacing: -0.2px;
+        line-height: 1.15;
+    }
 }
