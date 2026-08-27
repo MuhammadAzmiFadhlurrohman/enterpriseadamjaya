@@ -331,7 +331,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                                             <i class="fa-solid fa-pen"></i> Edit
                                         </a>
                                         <a href="#" class="action-btn btn-delete" 
-                                           onclick="confirmDelete(event, 'proses_hapus_pengajuan.php?id=<?= $p['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>&return_url=<?= urlencode($current_filter_url); ?>')">
+                                           onclick="confirmDeletePengajuan(event, 'proses_hapus_pengajuan.php?id=<?= $p['id']; ?>&csrf_token=<?= generate_csrf_token(); ?>&return_url=<?= urlencode($current_filter_url); ?>', '<?= e($p['custom_id']); ?>')">
                                             <i class="fa-solid fa-trash"></i> Hapus
                                         </a>
                                     <?php endif; ?>

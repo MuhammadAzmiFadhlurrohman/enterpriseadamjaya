@@ -323,11 +323,11 @@ function showGlobalPageLoader(msg, callback, delayMs = 1000) {
 /**
  * SweetAlert Confirm Delete Helper (Light Mode Styled)
  */
-function confirmDelete(event, url, message = "Data yang dihapus tidak dapat dikembalikan!") {
+function confirmDelete(event, url, message = "Data yang dihapus tidak dapat dikembalikan!", title = "Apakah Anda Yakin?") {
   event.preventDefault();
   Swal.fire({
-    title: 'Apakah Anda Yakin?',
-    text: message,
+    title: title,
+    html: message,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
@@ -347,6 +347,38 @@ function confirmDelete(event, url, message = "Data yang dihapus tidak dapat dike
     }
   });
 }
+
+/**
+ * SweetAlert Confirm Delete Transaksi Pengajuan (dengan info pengembalian stok)
+ */
+function confirmDeletePengajuan(event, url, customId = '') {
+  event.preventDefault();
+  const idText = customId ? ` #${customId}` : '';
+  Swal.fire({
+    title: `Hapus Transaksi${idText}?`,
+    html: `<div class="mb-2 text-muted">Data transaksi pembelian ini akan dihapus dari sistem.</div><div class="mt-2.5 p-2.5 rounded-3 bg-success-subtle text-success border border-success-subtle text-start small fw-semibold d-flex align-items-center gap-2"><i class="fa-solid fa-rotate-left fs-5 text-success flex-shrink-0"></i><span>Stok barang yang diajukan akan otomatis dikembalikan ke inventaris (kecuali barang custom).</span></div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="fa-solid fa-trash me-1"></i> Ya, Hapus & Kembalikan Stok',
+    cancelButtonText: 'Batal',
+    background: '#ffffff',
+    color: '#0f172a',
+    customClass: {
+      popup: 'shadow-lg border rounded-4'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      showGlobalPageLoader('Menghapus & mengembalikan stok...', function() {
+        window.location.href = url;
+      }, 1000);
+    }
+  });
+}
+
+window.confirmDelete = confirmDelete;
+window.confirmDeletePengajuan = confirmDeletePengajuan;
 
 /* ========================================================
    FEATURE 2: ANIMATED KPI COUNTER (COUNT UP ANIMATION)
