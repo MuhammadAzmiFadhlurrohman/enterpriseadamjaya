@@ -28,38 +28,39 @@ $initial_letter = strtoupper(substr($user['username'], 0, 1));
     <script>
         function formatRupiahJS(angka, prefix = 'Rp ') {
             if (angka === null || angka === undefined || angka === '') return '';
-            
+
+            let num = null;
             if (typeof angka === 'number') {
-                if (isNaN(angka)) return '';
-                let parts = String(angka).split('.');
-                let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
-                return prefix ? prefix + intPart + decPart : intPart + decPart;
-            }
+                num = angka;
+            } else {
+                let strVal = String(angka).trim();
+                if (strVal === '') return '';
 
-            let strVal = String(angka).trim();
-            if (strVal === '') return '';
-
-            // Handle pure MySQL decimal strings like "100000.00" or "50.50" (only if numeric float, no Rp, no comma)
-            if (/^-?\d+\.\d+$/.test(strVal) && !strVal.startsWith('Rp') && !strVal.includes(',')) {
-                let num = parseFloat(strVal);
-                if (!isNaN(num)) {
-                    let parts = String(num).split('.');
-                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                    let decPart = parts[1] && parts[1] !== '00' && parts[1] !== '0' ? ',' + parts[1] : '';
-                    return prefix ? prefix + intPart + decPart : intPart + decPart;
+                // MySQL decimal string or pure numeric like "100000.00" or "50.50"
+                if (/^-?\d+(\.\d+)?$/.test(strVal) && !strVal.startsWith('Rp') && !strVal.includes(',')) {
+                    num = parseFloat(strVal);
+                } else {
+                    let clean = strVal.replace(/[^0-9,-]/g, '').replace(',', '.');
+                    num = parseFloat(clean);
                 }
             }
 
-            // Live input or formatted string: strip non-digits except comma
-            let clean = strVal.replace(/[^0-9,]/g, '');
-            if (!clean) return '';
+            if (isNaN(num)) return '';
 
-            let split = clean.split(',');
-            let intPart = split[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            let decPart = split[1] !== undefined ? ',' + split[1] : '';
-            let result = intPart ? intPart + decPart : '';
-            return prefix ? (result ? prefix + result : '') : result;
+            // Bulatkan ke 2 desimal untuk menghilangkan artefak IEEE-754 (contoh: 4.4 * 55000 = 242000.00000000003)
+            let rounded = Math.round(num * 100) / 100;
+
+            // Jika bilangan bulat murni (tanpa pecahan sen)
+            if (Math.abs(rounded - Math.round(rounded)) < 0.00001) {
+                let intPart = String(Math.round(rounded)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return prefix ? prefix + intPart : intPart;
+            }
+
+            // Jika terdapat pecahan sen non-nol
+            let parts = rounded.toFixed(2).split('.');
+            let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            let decPart = ',' + parts[1].replace(/0+$/, '');
+            return prefix ? prefix + intPart + decPart : intPart + decPart;
         }
 
         function unformatRupiah(str) {

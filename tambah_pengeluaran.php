@@ -118,10 +118,12 @@ require_admin();
 let expRowIndex = 1;
 
 function calculateExpRow(idx) {
-    const qty = parseFloat(document.getElementById(`exp_jumlah_${idx}`).value) || 0;
+    const qtyElem = document.getElementById(`exp_jumlah_${idx}`);
+    const rawQty = qtyElem ? qtyElem.value : '';
+    const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
     const hargaStr = document.getElementById(`exp_harga_${idx}`).value;
     const harga = unformatRupiahJS(hargaStr);
-    const total = qty * harga;
+    const total = Math.round(qty * harga * 100) / 100;
 
     document.getElementById(`exp_subtotal_${idx}`).value = formatRupiahJS(total, 'Rp ');
     calculateExpGrandTotal();
@@ -131,10 +133,13 @@ function calculateExpGrandTotal() {
     let grandTotal = 0;
     document.querySelectorAll('.expense-row').forEach(row => {
         const idx = row.getAttribute('data-index');
-        const qty = parseFloat(document.getElementById(`exp_jumlah_${idx}`).value) || 0;
+        const qtyElem = document.getElementById(`exp_jumlah_${idx}`);
+        const rawQty = qtyElem ? qtyElem.value : '';
+        const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
         const harga = unformatRupiahJS(document.getElementById(`exp_harga_${idx}`).value);
         grandTotal += (qty * harga);
     });
+    grandTotal = Math.round(grandTotal * 100) / 100;
     document.getElementById('expGrandTotalDisplay').innerText = formatRupiahJS(grandTotal, 'Rp ');
 }
 
