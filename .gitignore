@@ -18,6 +18,9 @@ database_lama.sql
 aug_dump*.sql
 user_sql_dump.sql
 
-# Production Environment Database Config (Never overwritten by Git)
+# Production Environment Database & Environment Config (Never overwritten by Git)
+.env
+.env.*
 config/database.production.php
 config/database.local.php
+
