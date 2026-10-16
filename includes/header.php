@@ -74,7 +74,7 @@ $initial_letter = strtoupper(substr($user['username'], 0, 1));
 
             let parts = rounded.toFixed(2).split('.');
             let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            let decPart = ',' + parts[1].replace(/0+$/, '');
+            let decPart = ',' + parts[1];
             return (isNeg ? '-' : '') + (prefix ? prefix + intPart + decPart : intPart + decPart);
         }
 

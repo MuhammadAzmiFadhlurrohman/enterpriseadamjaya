@@ -272,10 +272,10 @@ function formatRupiahJS(angka, prefix = 'Rp ') {
     return (isNeg ? '-' : '') + (prefix ? prefix + intPart : intPart);
   }
 
-  // Jika terdapat pecahan sen non-nol
+  // Jika terdapat pecahan sen non-nol (2 digit sen)
   let parts = rounded.toFixed(2).split('.');
   let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  let decPart = ',' + parts[1].replace(/0+$/, '');
+  let decPart = ',' + parts[1];
   return (isNeg ? '-' : '') + (prefix ? prefix + intPart + decPart : intPart + decPart);
 }
 

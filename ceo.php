@@ -221,46 +221,182 @@ $status_text_map = [
     </div>
 </header>
 
+<style>
+/* Executive Compact Layout Styles */
+.filter-bar-compact {
+    background: #ffffff;
+    border: 1px solid rgba(122, 30, 51, 0.12) !important;
+    border-radius: 12px;
+}
+.exec-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+@media (max-width: 1199.98px) {
+    .exec-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .exec-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 480px) {
+    .exec-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.kpi-card-compact {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 0.8rem 0.95rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 114px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(30, 24, 20, 0.08);
+}
+.kpi-card-compact::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+.kpi-border-wine::before { background: #7A1E33; }
+.kpi-border-success::before { background: #1E8A5B; }
+.kpi-border-warning::before { background: #C9973E; }
+.kpi-border-danger::before { background: #DC2626; }
+
+.kpi-card-compact.kpi-hero {
+    background: linear-gradient(135deg, #1A0308 0%, #3d0a15 60%, #58101F 100%);
+    border: 1.5px solid #C9A84C !important;
+    color: #ffffff;
+}
+.kpi-card-compact.kpi-hero::before {
+    background: #ffd700;
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}
+.kpi-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    text-transform: uppercase;
+}
+.kpi-tag-wine { background: rgba(122, 30, 51, 0.08); color: #7A1E33; }
+.kpi-tag-success { background: rgba(30, 138, 91, 0.09); color: #1E8A5B; }
+.kpi-tag-warning { background: rgba(201, 151, 62, 0.12); color: #B45309; }
+.kpi-tag-danger { background: rgba(220, 38, 38, 0.08); color: #DC2626; }
+.kpi-tag-hero { background: rgba(201, 168, 76, 0.22); color: #ffd700; border: 1px solid rgba(201, 168, 76, 0.4); }
+
+.kpi-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+.kpi-icon-wine { background: rgba(122, 30, 51, 0.08); color: #7A1E33; }
+.kpi-icon-success { background: rgba(30, 138, 91, 0.09); color: #1E8A5B; }
+.kpi-icon-warning { background: rgba(201, 151, 62, 0.1); color: #C9973E; }
+.kpi-icon-danger { background: rgba(220, 38, 38, 0.08); color: #DC2626; }
+
+.kpi-val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+.kpi-val.val-dark { color: #1E2430; }
+.kpi-val.val-success { color: #15803D; }
+.kpi-val.val-warning { color: #B45309; }
+.kpi-val.val-danger { color: #DC2626; }
+.kpi-val.val-hero { color: #FFD700 !important; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.kpi-title {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #4b5563;
+    line-height: 1.2;
+}
+.kpi-sub {
+    font-size: 0.68rem;
+    color: #8c959f;
+    line-height: 1.2;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+</style>
+
 <!-- ========================================================
-     BAR FILTER INTERAKTIF REALTIME (STATUS & PERIODE)
+     BAR FILTER INTERAKTIF REALTIME (COMPACT & SLEEK)
      ======================================================== -->
-<div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden" style="background: #ffffff; border: 1px solid rgba(122, 30, 51, 0.12) !important;">
-    <div class="card-body p-3 p-md-3.5">
-        <form id="filterExecutiveForm" method="GET" action="ceo.php" class="row g-3 align-items-center">
-            <div class="col-12 col-lg-auto d-flex align-items-center gap-2.5">
-                <div class="d-inline-flex align-items-center justify-content-center rounded-3 shadow-sm" style="width: 42px; height: 42px; background: linear-gradient(135deg, #7A1E33 0%, #58101F 100%); color: #ffd700;">
-                    <i class="fa-solid fa-sliders fs-5"></i>
+<div class="card border-0 shadow-sm mb-3 rounded-3 filter-bar-compact">
+    <div class="card-body py-2 px-3">
+        <form id="filterExecutiveForm" method="GET" action="ceo.php" class="d-flex align-items-center justify-content-between flex-wrap gap-2.5">
+            <div class="d-flex align-items-center gap-2">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width: 32px; height: 32px; background: rgba(122, 30, 51, 0.09); color: #7A1E33;">
+                    <i class="fa-solid fa-sliders fs-6"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold text-wine mb-0" style="font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.3px;">Filter Dashboard Eksekutif</h6>
-                    <small class="text-muted" style="font-size: 0.76rem;">Kalkulasi realtime indikator keuangan perusahaan</small>
+                    <span class="fw-bold text-wine d-block" style="font-size: 0.85rem; line-height: 1.15;">Filter Dashboard</span>
+                    <small class="text-muted" style="font-size: 0.7rem;">Kalkulasi Realtime KPI</small>
                 </div>
             </div>
 
-            <div class="col-12 col-sm-6 col-lg-4">
-                <label class="form-label small fw-bold text-muted mb-1 d-flex align-items-center gap-1">
-                    <i class="fa-solid fa-calendar-days text-wine"></i> Periode Waktu:
-                </label>
-                <select name="periode" id="filterPeriode" class="form-select fw-semibold border-secondary-subtle" onchange="triggerFilterChange()">
-                    <option value="bulan_ini" <?= $periode === 'bulan_ini' ? 'selected' : ''; ?>>Bulan Ini (<?= date('M Y'); ?>)</option>
-                    <option value="tahun_ini" <?= $periode === 'tahun_ini' ? 'selected' : ''; ?>>Tahun Ini (<?= date('Y'); ?>)</option>
-                    <option value="semua_waktu" <?= $periode === 'semua_waktu' ? 'selected' : ''; ?>>Sepanjang Waktu (All-Time)</option>
-                </select>
-            </div>
+            <div class="d-flex align-items-center flex-wrap gap-2.5 ms-auto">
+                <div class="d-flex align-items-center gap-1.5">
+                    <label for="filterPeriode" class="small fw-semibold text-muted text-nowrap mb-0" style="font-size: 0.75rem;">
+                        <i class="fa-regular fa-calendar text-wine me-1"></i> Periode:
+                    </label>
+                    <select name="periode" id="filterPeriode" class="form-select form-select-sm fw-semibold border-secondary-subtle py-1" style="min-width: 165px; font-size: 0.78rem;" onchange="triggerFilterChange()">
+                        <option value="bulan_ini" <?= $periode === 'bulan_ini' ? 'selected' : ''; ?>>Bulan Ini (<?= date('M Y'); ?>)</option>
+                        <option value="tahun_ini" <?= $periode === 'tahun_ini' ? 'selected' : ''; ?>>Tahun Ini (<?= date('Y'); ?>)</option>
+                        <option value="semua_waktu" <?= $periode === 'semua_waktu' ? 'selected' : ''; ?>>Sepanjang Waktu</option>
+                    </select>
+                </div>
 
-            <div class="col-12 col-sm-6 col-lg-4">
-                <label class="form-label small fw-bold text-muted mb-1 d-flex align-items-center gap-1">
-                    <i class="fa-solid fa-receipt text-wine"></i> Status Transaksi:
-                </label>
-                <select name="status" id="filterStatus" class="form-select fw-semibold border-secondary-subtle" onchange="triggerFilterChange()">
-                    <option value="semua" <?= $status_filter === 'semua' ? 'selected' : ''; ?>>Semua Transaksi</option>
-                    <option value="lunas" <?= $status_filter === 'lunas' ? 'selected' : ''; ?>>Hanya Lunas (Lunas Penuh)</option>
-                    <option value="piutang" <?= $status_filter === 'piutang' ? 'selected' : ''; ?>>Hanya Piutang (Belum Lunas / Cicilan)</option>
-                </select>
-            </div>
+                <div class="d-flex align-items-center gap-1.5">
+                    <label for="filterStatus" class="small fw-semibold text-muted text-nowrap mb-0" style="font-size: 0.75rem;">
+                        <i class="fa-solid fa-receipt text-wine me-1"></i> Status:
+                    </label>
+                    <select name="status" id="filterStatus" class="form-select form-select-sm fw-semibold border-secondary-subtle py-1" style="min-width: 175px; font-size: 0.78rem;" onchange="triggerFilterChange()">
+                        <option value="semua" <?= $status_filter === 'semua' ? 'selected' : ''; ?>>Semua Transaksi</option>
+                        <option value="lunas" <?= $status_filter === 'lunas' ? 'selected' : ''; ?>>Hanya Lunas (100%)</option>
+                        <option value="piutang" <?= $status_filter === 'piutang' ? 'selected' : ''; ?>>Hanya Piutang / Cicilan</option>
+                    </select>
+                </div>
 
-            <div class="col-12 col-lg d-flex justify-content-lg-end align-items-center gap-2 pt-lg-3">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="resetFilter()" title="Kembalikan ke Default">
+                <button type="button" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted fw-semibold" style="font-size: 0.75rem;" onclick="resetFilter()" title="Kembalikan ke Default">
                     <i class="fa-solid fa-arrow-rotate-left me-1"></i> Reset
                 </button>
                 <div id="filterSpinner" class="spinner-border spinner-border-sm text-wine d-none" role="status" aria-hidden="true"></div>
@@ -270,165 +406,102 @@ $status_text_map = [
 </div>
 
 <!-- ========================================================
-     5 KARTU RINGKASAN KPI KEUANGAN EKSEKUTIF UTAMA
+     5 KARTU RINGKASAN KPI KEUANGAN (KOMPAK & RAPI)
      ======================================================== -->
-<div class="row g-3 stats-row mb-3">
+<div class="exec-kpi-grid mb-3">
     <!-- 1. Total Omzet / Transaksi (Bruto) -->
-    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.05s">
-        <div class="stats-card h-100 position-relative border-top border-4 border-wine shadow-sm">
-            <div class="card-body p-3.5">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge bg-wine-subtle text-wine border border-wine-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
-                        OMZET BRUTO
-                    </span>
-                    <div class="stat-icon icon-wine m-0" style="width: 40px; height: 40px;">
-                        <i class="fa-solid fa-file-invoice-dollar fs-5"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="stat-value text-dark fw-bolder" id="kpi_omzet_bruto" style="font-size: 1.55rem; letter-spacing: -0.5px;">
-                        <?= formatRupiah($total_omzet_bruto); ?>
-                    </div>
-                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Total Omzet / Transaksi (Bruto)</div>
-                    <small class="text-secondary d-block mt-0.5" id="kpi_omzet_sub" style="font-size: 0.75rem;">
-                        Total transaksi pembelian (<?= number_format($total_trx); ?> Pengadaan)
-                    </small>
-                </div>
-            </div>
+    <div class="kpi-card-compact kpi-border-wine dash-reveal" style="--reveal-delay: 0.05s">
+        <div class="kpi-header">
+            <span class="kpi-tag kpi-tag-wine">OMZET BRUTO</span>
+            <div class="kpi-icon kpi-icon-wine"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        </div>
+        <div>
+            <div class="kpi-val val-dark" id="kpi_omzet_bruto"><?= formatRupiah($total_omzet_bruto); ?></div>
+            <div class="kpi-title">Total Omzet / Transaksi</div>
+            <div class="kpi-sub" id="kpi_omzet_sub"><?= number_format($total_trx); ?> Transaksi Pembelian</div>
         </div>
     </div>
 
-    <!-- 2. Pemasukan Riil (Kas Diterima / Lunas & DP) -->
-    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.12s">
-        <div class="stats-card h-100 position-relative border-top border-4 border-success shadow-sm">
-            <div class="card-body p-3.5">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
-                        KAS MASUK RIIL
-                    </span>
-                    <div class="stat-icon icon-success m-0" style="width: 40px; height: 40px;">
-                        <i class="fa-solid fa-hand-holding-dollar fs-5"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="stat-value text-success fw-bolder" id="kpi_pemasukan_riil" style="font-size: 1.55rem; letter-spacing: -0.5px;">
-                        <?= formatRupiah($pemasukan_riil); ?>
-                    </div>
-                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Pemasukan Riil (Kas Diterima)</div>
-                    <small class="text-secondary d-block mt-0.5" style="font-size: 0.75rem;">
-                        Uang kas nyata diterima (Lunas & DP)
-                    </small>
-                </div>
-            </div>
+    <!-- 2. Pemasukan Riil (Kas Diterima) -->
+    <div class="kpi-card-compact kpi-border-success dash-reveal" style="--reveal-delay: 0.10s">
+        <div class="kpi-header">
+            <span class="kpi-tag kpi-tag-success">KAS DITERIMA</span>
+            <div class="kpi-icon kpi-icon-success"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        </div>
+        <div>
+            <div class="kpi-val val-success" id="kpi_pemasukan_riil"><?= formatRupiah($pemasukan_riil); ?></div>
+            <div class="kpi-title">Pemasukan Riil Kas</div>
+            <div class="kpi-sub">Kas Nyata Masuk (Lunas & DP)</div>
         </div>
     </div>
 
-    <!-- 3. Total Piutang Berjalan (Belum Lunas / Sisa) -->
-    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.19s">
-        <div class="stats-card h-100 position-relative border-top border-4 border-warning shadow-sm">
-            <div class="card-body p-3.5">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
-                        PIUTANG BERJALAN
-                    </span>
-                    <div class="stat-icon icon-gold m-0" style="width: 40px; height: 40px;">
-                        <i class="fa-solid fa-clock-rotate-left fs-5"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="stat-value text-warning fw-bolder" id="kpi_piutang_berjalan" style="font-size: 1.55rem; letter-spacing: -0.5px;">
-                        <?= formatRupiah($total_piutang); ?>
-                    </div>
-                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Total Piutang Berjalan</div>
-                    <small class="text-secondary d-block mt-0.5" style="font-size: 0.75rem;">
-                        Tagihan belum lunas di tangan pelanggan
-                    </small>
-                </div>
-            </div>
+    <!-- 3. Total Piutang Berjalan -->
+    <div class="kpi-card-compact kpi-border-warning dash-reveal" style="--reveal-delay: 0.15s">
+        <div class="kpi-header">
+            <span class="kpi-tag kpi-tag-warning">PIUTANG BERJALAN</span>
+            <div class="kpi-icon kpi-icon-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        </div>
+        <div>
+            <div class="kpi-val val-warning" id="kpi_piutang_berjalan"><?= formatRupiah($total_piutang); ?></div>
+            <div class="kpi-title">Total Piutang Berjalan</div>
+            <div class="kpi-sub">Sisa Tagihan di Pelanggan</div>
         </div>
     </div>
-</div>
 
-<div class="row g-3 stats-row mb-4">
     <!-- 4. Pengeluaran Kas Operasional -->
-    <div class="col-12 col-md-6 dash-reveal" style="--reveal-delay: 0.26s">
-        <div class="stats-card h-100 position-relative border-top border-4 border-danger shadow-sm">
-            <div class="card-body p-3.5">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
-                        KAS KELUAR OPERASIONAL
-                    </span>
-                    <div class="stat-icon icon-danger m-0" style="width: 40px; height: 40px;">
-                        <i class="fa-solid fa-arrow-trend-down fs-5"></i>
-                    </div>
-                </div>
-                <div>
-                    <div class="stat-value text-danger fw-bolder" id="kpi_pengeluaran_kas" style="font-size: 1.65rem; letter-spacing: -0.5px;">
-                        <?= formatRupiah($pengeluaran_kas); ?>
-                    </div>
-                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.84rem;">Pengeluaran Kas Operasional</div>
-                    <small class="text-secondary d-block mt-0.5" id="kpi_pengeluaran_sub" style="font-size: 0.76rem;">
-                        Biaya operasional kas (<?= number_format($total_trx_exp); ?> Transaksi)
-                    </small>
-                </div>
-            </div>
+    <div class="kpi-card-compact kpi-border-danger dash-reveal" style="--reveal-delay: 0.20s">
+        <div class="kpi-header">
+            <span class="kpi-tag kpi-tag-danger">KAS OPERASIONAL</span>
+            <div class="kpi-icon kpi-icon-danger"><i class="fa-solid fa-arrow-trend-down"></i></div>
+        </div>
+        <div>
+            <div class="kpi-val val-danger" id="kpi_pengeluaran_kas"><?= formatRupiah($pengeluaran_kas); ?></div>
+            <div class="kpi-title">Pengeluaran Kas</div>
+            <div class="kpi-sub" id="kpi_pengeluaran_sub"><?= number_format($total_trx_exp); ?> Catatan Pengeluaran</div>
         </div>
     </div>
 
-    <!-- 5. Estimasi Laba / Untung Bersih (Hero Executive Card) -->
-    <div class="col-12 col-md-6 dash-reveal" style="--reveal-delay: 0.33s">
-        <div class="card h-100 position-relative rounded-3 shadow-sm overflow-hidden" style="background: linear-gradient(135deg, #1A0308 0%, #3d0a15 60%, #58101F 100%); border: 1.5px solid #C9973E;">
-            <div class="card-body p-3.5 d-flex flex-column justify-content-between text-white">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge px-2.5 py-1 fw-bold" style="background: rgba(201, 151, 62, 0.25); color: #ffd700; border: 1px solid rgba(201, 151, 62, 0.5); font-size: 0.72rem;">
-                        <i class="fa-solid fa-crown me-1 text-gold"></i> NET CASH PROFIT
+    <!-- 5. Estimasi Laba / Untung Bersih (Hero Card) -->
+    <div class="kpi-card-compact kpi-hero dash-reveal" style="--reveal-delay: 0.25s">
+        <div class="kpi-header">
+            <span class="kpi-tag kpi-tag-hero"><i class="fa-solid fa-crown me-1 text-gold"></i> LABA BERSIH</span>
+            <div id="kpi_laba_badge">
+                <?php if ($estimasi_laba_bersih >= 0): ?>
+                    <span class="badge bg-success px-2 py-0.5 text-white fw-bold shadow-sm" style="font-size: 0.65rem;">
+                        <i class="fa-solid fa-circle-check me-0.5"></i> Surplus
                     </span>
-                    <div id="kpi_laba_badge">
-                        <?php if ($estimasi_laba_bersih >= 0): ?>
-                            <span class="badge bg-success px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;">
-                                <i class="fa-solid fa-circle-check me-1"></i> Surplus Kas
-                            </span>
-                        <?php else: ?>
-                            <span class="badge bg-danger px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;">
-                                <i class="fa-solid fa-circle-exclamation me-1"></i> Defisit Kas
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="stat-value fw-bolder mb-1" id="kpi_laba_bersih" style="font-size: 1.95rem; color: #ffd700 !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: -0.5px;">
-                        <?= formatRupiah($estimasi_laba_bersih); ?>
-                    </div>
-                    <div class="fw-bold" style="color: #f1ebd8; font-size: 0.9rem;">
-                        Estimasi Laba / Untung Bersih
-                    </div>
-                    <small style="color: rgba(255,255,255,0.78); font-size: 0.76rem;">
-                        Kalkulasi: Pemasukan Kas Diterima &minus; Pengeluaran Kas Operasional
-                    </small>
-                </div>
+                <?php else: ?>
+                    <span class="badge bg-danger px-2 py-0.5 text-white fw-bold shadow-sm" style="font-size: 0.65rem;">
+                        <i class="fa-solid fa-circle-exclamation me-0.5"></i> Defisit
+                    </span>
+                <?php endif; ?>
             </div>
+        </div>
+        <div>
+            <div class="kpi-val val-hero" id="kpi_laba_bersih"><?= formatRupiah($estimasi_laba_bersih); ?></div>
+            <div class="kpi-title" style="color: #f1ebd8;">Estimasi Laba Bersih</div>
+            <div class="kpi-sub" style="color: rgba(255,255,255,0.72);">Kas Masuk &minus; Biaya Kas</div>
         </div>
     </div>
 </div>
 
 <!-- Quick Strip Persediaan & Pelanggan Aktif -->
-<div class="p-2.5 px-3 mb-4 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm border" style="background: #ffffff; border-color: rgba(0,0,0,0.06) !important;">
+<div class="p-2 px-3 mb-4 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm border" style="background: #ffffff; border-color: rgba(0,0,0,0.06) !important; font-size: 0.78rem;">
     <div class="d-flex align-items-center gap-3 flex-wrap">
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1.5">
             <i class="fa-solid fa-boxes-stacked text-wine"></i>
-            <span class="small text-muted">Persediaan Gudang:</span>
-            <strong class="small text-dark"><?= format_stok($row_stok['total_unit']); ?> Unit (<?= $row_stok['total_varian']; ?> Varian)</strong>
+            <span class="text-muted">Gudang:</span>
+            <strong class="text-dark"><?= format_stok($row_stok['total_unit']); ?> Unit (<?= $row_stok['total_varian']; ?> Varian)</strong>
         </div>
-        <div class="vr d-none d-sm-block" style="height: 18px;"></div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="vr d-none d-sm-block" style="height: 16px;"></div>
+        <div class="d-flex align-items-center gap-1.5">
             <i class="fa-solid fa-users text-wine"></i>
-            <span class="small text-muted">Pelanggan Aktif:</span>
-            <strong class="small text-dark"><?= number_format($row_pembeli['total_pembeli']); ?> Klien Terdaftar</strong>
+            <span class="text-muted">Pelanggan:</span>
+            <strong class="text-dark"><?= number_format($row_pembeli['total_pembeli']); ?> Klien Terdaftar</strong>
         </div>
     </div>
     <div>
-        <span class="badge bg-light text-secondary border px-2.5 py-1 fw-semibold" style="font-size: 0.74rem;">
+        <span class="badge bg-light text-secondary border px-2 py-1 fw-semibold" style="font-size: 0.72rem;">
             <i class="fa-solid fa-filter me-1 text-wine"></i>
             <?= $periode_text_map[$periode] ?? 'Bulan Ini'; ?> &bull; <?= $status_text_map[$status_filter] ?? 'Semua'; ?>
         </span>
@@ -599,20 +672,20 @@ function triggerFilterChange() {
                 // Update sub label transaksi
                 const omzetSub = document.getElementById('kpi_omzet_sub');
                 if (omzetSub) {
-                    omzetSub.innerText = `Total transaksi pembelian (${data.total_trx} Pengadaan)`;
+                    omzetSub.innerText = `${Number(data.total_trx).toLocaleString('id-ID')} Transaksi Pembelian`;
                 }
                 const expSub = document.getElementById('kpi_pengeluaran_sub');
                 if (expSub) {
-                    expSub.innerText = `Biaya operasional kas (${data.total_trx_exp} Transaksi)`;
+                    expSub.innerText = `${Number(data.total_trx_exp).toLocaleString('id-ID')} Catatan Pengeluaran`;
                 }
 
                 // Update badge surplus/defisit
                 const badgeEl = document.getElementById('kpi_laba_badge');
                 if (badgeEl) {
                     if (data.is_surplus) {
-                        badgeEl.innerHTML = `<span class="badge bg-success px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-check me-1"></i> Surplus Kas</span>`;
+                        badgeEl.innerHTML = `<span class="badge bg-success px-2 py-0.5 text-white fw-bold shadow-sm" style="font-size: 0.65rem;"><i class="fa-solid fa-circle-check me-0.5"></i> Surplus</span>`;
                     } else {
-                        badgeEl.innerHTML = `<span class="badge bg-danger px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-exclamation me-1"></i> Defisit Kas</span>`;
+                        badgeEl.innerHTML = `<span class="badge bg-danger px-2 py-0.5 text-white fw-bold shadow-sm" style="font-size: 0.65rem;"><i class="fa-solid fa-circle-exclamation me-0.5"></i> Defisit</span>`;
                     }
                 }
             }

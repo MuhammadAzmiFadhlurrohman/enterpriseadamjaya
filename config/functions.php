@@ -184,17 +184,21 @@ function ensure_cicilan_schema_exists($conn) {
 
 /**
  * Format Angka ke Format Rupiah
+ * Contoh: 100000 -> "Rp 100.000" | 54999.98 -> "Rp 54.999,98" | -46967850.2 -> "-Rp 46.967.850,20"
  */
 function formatRupiah($val, $with_prefix = true) {
     if ($val === null || $val === '') return $with_prefix ? 'Rp 0' : '0';
     $num = (float)$val;
-    $rounded = round($num, 2);
+    $is_neg = ($num < 0);
+    $abs_num = abs($num);
+    $rounded = round($abs_num, 2);
     if (abs($rounded - round($rounded)) < 0.00001) {
         $formatted = number_format($rounded, 0, ',', '.');
     } else {
         $formatted = number_format($rounded, 2, ',', '.');
     }
-    return $with_prefix ? 'Rp ' . $formatted : $formatted;
+    $prefix = $with_prefix ? 'Rp ' : '';
+    return ($is_neg ? '-' : '') . $prefix . $formatted;
 }
 
 /**
