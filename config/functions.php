@@ -186,8 +186,14 @@ function ensure_cicilan_schema_exists($conn) {
  * Format Angka ke Format Rupiah
  */
 function formatRupiah($val, $with_prefix = true) {
+    if ($val === null || $val === '') return $with_prefix ? 'Rp 0' : '0';
     $num = (float)$val;
-    $formatted = number_format($num, 0, ',', '.');
+    $rounded = round($num, 2);
+    if (abs($rounded - round($rounded)) < 0.00001) {
+        $formatted = number_format($rounded, 0, ',', '.');
+    } else {
+        $formatted = number_format($rounded, 2, ',', '.');
+    }
     return $with_prefix ? 'Rp ' . $formatted : $formatted;
 }
 
@@ -239,33 +245,64 @@ function format_stok($val) {
 
 /**
  * Parse input jumlah/kuantitas desimal murni
+ * Mendukung format: "2.149,8", "2,149.8", "2149,8", "2149.8"
  */
 function parseJumlah($val) {
-    if (empty($val)) return 0.0;
-    $cleaned = str_replace(',', '.', (string)$val);
-    return (float)$cleaned;
+    if (empty($val) && $val !== '0' && $val !== 0) return 0.0;
+    if (is_int($val) || is_float($val)) return (float)$val;
+    $s = trim((string)$val);
+    if ($s === '') return 0.0;
+
+    // Keduanya ada titik dan koma, misal "2.149,8" atau "2,149.8"
+    if (strpos($s, '.') !== false && strpos($s, ',') !== false) {
+        if (strrpos($s, ',') > strrpos($s, '.')) {
+            // Format Indonesia: titik ribuan, koma desimal -> 2149.8
+            $s = str_replace('.', '', $s);
+            $s = str_replace(',', '.', $s);
+        } else {
+            // Format US: koma ribuan, titik desimal -> 2149.8
+            $s = str_replace(',', '', $s);
+        }
+    } elseif (strpos($s, ',') !== false) {
+        // Hanya koma: "2149,8" -> 2149.8
+        $s = str_replace(',', '.', $s);
+    }
+    return (float)$s;
 }
 
 /**
  * Membersihkan Format Rupiah menjadi Float/Decimal murni
- * Contoh: "Rp 1.450.000" -> 1450000.00 | "Rp 55.000,50" -> 55000.50
+ * Contoh: "Rp 1.450.000" -> 1450000.00 | "Rp 54.999,98" -> 54999.98
  */
 function unformatRupiah($str) {
     if (empty($str) && $str !== '0' && $str !== 0) return 0.0;
     if (is_int($str) || is_float($str)) return (float)$str;
 
     $str = (string)$str;
-    // Hapus Rp, spasi, dan huruf
     $cleaned = preg_replace('/[^\d,.-]/', '', $str);
     if (empty($cleaned)) return 0.0;
 
-    // Jika ada koma, titik adalah pemisah ribuan dan koma desimal (misal "55.000,50")
-    if (strpos($cleaned, ',') !== false) {
-        $cleaned = str_replace('.', '', $cleaned);
+    // Jika ada titik dan koma (misal "54.999,98")
+    if (strpos($cleaned, '.') !== false && strpos($cleaned, ',') !== false) {
+        if (strrpos($cleaned, ',') > strrpos($cleaned, '.')) {
+            // Indonesia: 54.999,98 -> 54999.98
+            $cleaned = str_replace('.', '', $cleaned);
+            $cleaned = str_replace(',', '.', $cleaned);
+        } else {
+            // US: 54,999.98 -> 54999.98
+            $cleaned = str_replace(',', '', $cleaned);
+        }
+    } elseif (strpos($cleaned, ',') !== false) {
+        // Hanya koma (misal "54999,98" atau "500,5")
         $cleaned = str_replace(',', '.', $cleaned);
-    } else {
-        // Dalam string formatted Rupiah (misal "500.000" atau "1.450.000"), titik adalah pemisah ribuan
-        $cleaned = str_replace('.', '', $cleaned);
+    } elseif (strpos($cleaned, '.') !== false) {
+        // Hanya titik: cek apakah pecahan sen 1 atau 2 digit desimal murni misal "54999.98"
+        if (preg_match('/^\d+\.\d{1,2}$/', $cleaned)) {
+            // Sudah desimal standar
+        } else {
+            // Titik ribuan biasa ("54.000")
+            $cleaned = str_replace('.', '', $cleaned);
+        }
     }
     return (float)$cleaned;
 }

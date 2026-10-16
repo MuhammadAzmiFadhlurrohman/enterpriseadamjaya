@@ -73,7 +73,7 @@ require_admin();
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label text-muted small fw-semibold">JUMLAH (QTY)</label>
-                        <input type="number" step="0.01" name="jumlah_0" id="exp_jumlah_0" class="form-control" value="1.00" oninput="calculateExpRow(0)" required>
+                        <input type="text" inputmode="decimal" name="jumlah_0" id="exp_jumlah_0" class="form-control" value="1" oninput="calculateExpRow(0)" placeholder="Contoh: 2.149,8" required>
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label text-muted small fw-semibold">SATUAN</label>
@@ -120,12 +120,16 @@ let expRowIndex = 1;
 function calculateExpRow(idx) {
     const qtyElem = document.getElementById(`exp_jumlah_${idx}`);
     const rawQty = qtyElem ? qtyElem.value : '';
-    const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
-    const hargaStr = document.getElementById(`exp_harga_${idx}`).value;
+    const qty = parseQtyJS(rawQty);
+    const hargaElem = document.getElementById(`exp_harga_${idx}`);
+    const hargaStr = hargaElem ? hargaElem.value : '0';
     const harga = unformatRupiahJS(hargaStr);
     const total = Math.round(qty * harga * 100) / 100;
 
-    document.getElementById(`exp_subtotal_${idx}`).value = formatRupiahJS(total, 'Rp ');
+    const subElem = document.getElementById(`exp_subtotal_${idx}`);
+    if (subElem) {
+        subElem.value = formatRupiahJS(total, 'Rp ');
+    }
     calculateExpGrandTotal();
 }
 
@@ -135,12 +139,16 @@ function calculateExpGrandTotal() {
         const idx = row.getAttribute('data-index');
         const qtyElem = document.getElementById(`exp_jumlah_${idx}`);
         const rawQty = qtyElem ? qtyElem.value : '';
-        const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
-        const harga = unformatRupiahJS(document.getElementById(`exp_harga_${idx}`).value);
+        const qty = parseQtyJS(rawQty);
+        const hargaElem = document.getElementById(`exp_harga_${idx}`);
+        const harga = hargaElem ? unformatRupiahJS(hargaElem.value) : 0;
         grandTotal += (qty * harga);
     });
     grandTotal = Math.round(grandTotal * 100) / 100;
-    document.getElementById('expGrandTotalDisplay').innerText = formatRupiahJS(grandTotal, 'Rp ');
+    const disp = document.getElementById('expGrandTotalDisplay');
+    if (disp) {
+        disp.innerText = formatRupiahJS(grandTotal, 'Rp ');
+    }
 }
 
 function addExpenseRow() {
@@ -168,7 +176,7 @@ function addExpenseRow() {
             </div>
             <div class="col-6 col-md-2">
                 <label class="form-label text-muted small fw-semibold">JUMLAH (QTY)</label>
-                <input type="number" step="0.01" name="jumlah_${idx}" id="exp_jumlah_${idx}" class="form-control" value="1.00" oninput="calculateExpRow(${idx})" required>
+                <input type="text" inputmode="decimal" name="jumlah_${idx}" id="exp_jumlah_${idx}" class="form-control" value="1" oninput="calculateExpRow(${idx})" placeholder="Contoh: 2.149,8" required>
             </div>
             <div class="col-6 col-md-2">
                 <label class="form-label text-muted small fw-semibold">SATUAN</label>

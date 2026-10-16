@@ -240,7 +240,7 @@ while ($f = mysqli_fetch_assoc($res_fav)) {
                 <div class="row g-3 mt-1">
                     <div class="col-6 col-md-3">
                         <label class="form-label text-muted small fw-semibold">Jumlah (QTY) *</label>
-                        <input type="number" step="0.01" inputmode="decimal" name="jumlah_0" id="jumlah_0" class="form-control fw-bold" value="1" oninput="calculateRow(0)" placeholder="Jumlah" required>
+                        <input type="text" inputmode="decimal" name="jumlah_0" id="jumlah_0" class="form-control fw-bold" value="1" oninput="calculateRow(0)" placeholder="Contoh: 2.149,8" required>
                         <div class="mt-1 small text-muted" id="stok_info_wrapper_0">
                             <div id="stok_label_0"><i class="fa-solid fa-boxes-stacked me-1"></i> Stok tersedia: -</div>
                         </div>
@@ -390,31 +390,30 @@ while ($f = mysqli_fetch_assoc($res_fav)) {
 <script>
 // Standalone Named Functions (Hoisted globally)
 function unformatRupiah(str) {
+    if (typeof window.unformatRupiahJS === 'function' && window.unformatRupiahJS !== unformatRupiah) {
+        return window.unformatRupiahJS(str);
+    }
     if (!str) return 0;
-    let cleaned = str.toString().replace(/[^0-9,-]/g, '').replace(',', '.');
+    let s = String(str).trim();
+    if (s.includes(',')) {
+        let cleaned = s.replace(/[^0-9,-]/g, '').replace(/\./g, '').replace(',', '.');
+        return parseFloat(cleaned) || 0;
+    }
+    let cleaned = s.replace(/[^0-9-]/g, '');
     return parseFloat(cleaned) || 0;
 }
 function unformatRupiahJS(str) {
     return unformatRupiah(str);
 }
 function formatRupiah(num) {
-    if (typeof formatRupiahJS === 'function') return formatRupiahJS(num, 'Rp ');
+    if (typeof window.formatRupiahJS === 'function') return window.formatRupiahJS(num, 'Rp ');
     return 'Rp ' + (num || 0).toLocaleString('id-ID');
 }
 function formatRupiahInput(input) {
-    if (!input) return;
-    let val = input.value;
-    if (typeof formatRupiahJS === 'function') {
-        input.value = formatRupiahJS(val, 'Rp ');
-    } else {
-        let clean = val.toString().replace(/[^\d]/g, '');
-        input.value = clean ? 'Rp ' + parseInt(clean, 10).toLocaleString('id-ID') : '';
+    if (typeof window.formatRupiahInput === 'function' && window.formatRupiahInput !== formatRupiahInput) {
+        return window.formatRupiahInput(input);
     }
 }
-window.unformatRupiah = unformatRupiah;
-window.unformatRupiahJS = unformatRupiah;
-window.formatRupiah = formatRupiah;
-window.formatRupiahInput = formatRupiahInput;
 
 let rowIndexCounter = 1;
 const barangIndukList = <?= json_encode($barang_induk_list); ?>;
@@ -971,12 +970,16 @@ function toggleCustomItem(idx) {
 function calculateRow(idx) {
     const qtyElem = document.getElementById(`jumlah_${idx}`);
     const rawQty = qtyElem ? qtyElem.value : '';
-    const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
-    const hargaStr = document.getElementById(`harga_${idx}`).value;
+    const qty = parseQtyJS(rawQty);
+    const hargaElem = document.getElementById(`harga_${idx}`);
+    const hargaStr = hargaElem ? hargaElem.value : '0';
     const harga = unformatRupiahJS(hargaStr);
     const subtotal = Math.round(qty * harga * 100) / 100;
 
-    document.getElementById(`subtotal_${idx}`).value = formatRupiahJS(subtotal, 'Rp ');
+    const subElem = document.getElementById(`subtotal_${idx}`);
+    if (subElem) {
+        subElem.value = formatRupiahJS(subtotal, 'Rp ');
+    }
     calculateGrandTotal();
 }
 
@@ -986,12 +989,16 @@ function calculateGrandTotal() {
         const idx = row.getAttribute('data-index');
         const qtyElem = document.getElementById(`jumlah_${idx}`);
         const rawQty = qtyElem ? qtyElem.value : '';
-        const qty = parseFloat(String(rawQty).replace(',', '.')) || 0;
-        const harga = unformatRupiahJS(document.getElementById(`harga_${idx}`).value);
+        const qty = parseQtyJS(rawQty);
+        const hargaElem = document.getElementById(`harga_${idx}`);
+        const harga = hargaElem ? unformatRupiahJS(hargaElem.value) : 0;
         grandTotal += (qty * harga);
     });
     grandTotal = Math.round(grandTotal * 100) / 100;
-    document.getElementById('grandTotalDisplay').innerText = formatRupiahJS(grandTotal, 'Rp ');
+    const disp = document.getElementById('grandTotalDisplay');
+    if (disp) {
+        disp.innerText = formatRupiahJS(grandTotal, 'Rp ');
+    }
 }
 
 function addItemRow() {
@@ -1049,7 +1056,7 @@ function addItemRow() {
         <div class="row g-3 mt-1">
             <div class="col-6 col-md-3">
                 <label class="form-label text-muted small fw-semibold">Jumlah (QTY) *</label>
-                <input type="number" step="0.01" inputmode="decimal" name="jumlah_${idx}" id="jumlah_${idx}" class="form-control fw-bold" value="1" oninput="calculateRow(${idx})" placeholder="Jumlah" required>
+                <input type="text" inputmode="decimal" name="jumlah_${idx}" id="jumlah_${idx}" class="form-control fw-bold" value="1" oninput="calculateRow(${idx})" placeholder="Contoh: 2.149,8" required>
                 <div class="mt-1 small text-muted" id="stok_info_wrapper_${idx}">
                     <div id="stok_label_${idx}"><i class="fa-solid fa-boxes-stacked me-1"></i> Stok tersedia: -</div>
                 </div>

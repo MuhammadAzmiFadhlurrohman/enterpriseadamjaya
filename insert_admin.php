@@ -99,11 +99,8 @@ while ($row = mysqli_fetch_assoc($result)) {
     $total_count++;
     $nom = (float)$row['estimasi_dana'];
     $total_nominal += $nom;
-    if ($row['status_pembayaran'] === 'dibayar') {
-        $total_dibayar += $nom;
-    } else {
-        $total_belum_dibayar += $nom;
-    }
+    $total_dibayar += (float)($row['jumlah_dibayar'] ?? ($row['status_pembayaran'] === 'dibayar' ? $nom : 0));
+    $total_belum_dibayar += (float)($row['sisa_pembayaran'] ?? ($row['status_pembayaran'] === 'dibayar' ? 0 : $nom));
 }
 ?>
 
@@ -155,10 +152,10 @@ while ($row = mysqli_fetch_assoc($result)) {
     <div class="col-6 col-md-3">
         <div class="stats-card">
             <div class="card-body">
-                <div class="stat-icon icon-success"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="stat-icon icon-success"><i class="fa-solid fa-hand-holding-dollar"></i></div>
                 <div>
                     <div class="stat-value"><?= formatRupiah($total_dibayar); ?></div>
-                    <div class="stat-label">Sudah Lunas Dibayar</div>
+                    <div class="stat-label">Pemasukan Kas (Lunas & DP)</div>
                 </div>
             </div>
         </div>
@@ -166,10 +163,10 @@ while ($row = mysqli_fetch_assoc($result)) {
     <div class="col-6 col-md-3">
         <div class="stats-card">
             <div class="card-body">
-                <div class="stat-icon icon-danger"><i class="fa-solid fa-hourglass-half"></i></div>
+                <div class="stat-icon icon-danger"><i class="fa-solid fa-clock-rotate-left"></i></div>
                 <div>
                     <div class="stat-value"><?= formatRupiah($total_belum_dibayar); ?></div>
-                    <div class="stat-label">Belum Dibayar</div>
+                    <div class="stat-label">Sisa Piutang Berjalan</div>
                 </div>
             </div>
         </div>

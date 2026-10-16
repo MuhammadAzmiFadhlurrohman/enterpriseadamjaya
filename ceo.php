@@ -2,26 +2,135 @@
 require_once __DIR__ . '/includes/header.php';
 require_login(); // Admin and CEO can view
 
-// Query Executive Stats
-$res_pengajuan = mysqli_query($conn, "SELECT COUNT(id) as total_trx, IFNULL(SUM(CAST(estimasi_dana AS DECIMAL(15,2))), 0) as total_val FROM pengajuan");
-$row_pengajuan = mysqli_fetch_assoc($res_pengajuan);
+// ────────────────────────────────────────────────
+// Parameter Filter Interaktif Eksekutif
+// ────────────────────────────────────────────────
+$is_ajax = (isset($_GET['ajax']) && $_GET['ajax'] == '1');
 
-$res_pengeluaran = mysqli_query($conn, "SELECT IFNULL(SUM(total_pengeluaran), 0) as total_exp FROM pengeluaran_header");
-$row_pengeluaran = mysqli_fetch_assoc($res_pengeluaran);
+$periode = sanitize($_GET['periode'] ?? 'bulan_ini');
+$status_filter = sanitize($_GET['status'] ?? 'semua');
 
+if (!in_array($periode, ['bulan_ini', 'tahun_ini', 'semua_waktu'])) {
+    $periode = 'bulan_ini';
+}
+if (!in_array($status_filter, ['semua', 'lunas', 'piutang'])) {
+    $status_filter = 'semua';
+}
+
+// ────────────────────────────────────────────────
+// 1. Filter Query Pengajuan (Omzet, Pemasukan Riil, Piutang)
+// ────────────────────────────────────────────────
+$where_p = ["1=1"];
+
+if ($periode === 'bulan_ini') {
+    $where_p[] = "MONTH(p.created_at) = MONTH(CURRENT_DATE()) AND YEAR(p.created_at) = YEAR(CURRENT_DATE())";
+} elseif ($periode === 'tahun_ini') {
+    $where_p[] = "YEAR(p.created_at) = YEAR(CURRENT_DATE())";
+}
+
+if ($status_filter === 'lunas') {
+    $where_p[] = "p.status_pembayaran = 'dibayar'";
+} elseif ($status_filter === 'piutang') {
+    $where_p[] = "(p.status_pembayaran IN ('belum_dibayar', 'cicilan') OR p.sisa_pembayaran > 0)";
+}
+$where_p_sql = implode(" AND ", $where_p);
+
+$sql_kpi_p = "SELECT 
+    COUNT(p.id) as total_trx,
+    IFNULL(SUM(CAST(p.estimasi_dana AS DECIMAL(15,2))), 0) as total_omzet_bruto,
+    IFNULL(SUM(CAST(p.jumlah_dibayar AS DECIMAL(15,2))), 0) as total_kas_diterima,
+    IFNULL(SUM(CAST(p.sisa_pembayaran AS DECIMAL(15,2))), 0) as total_piutang_berjalan,
+    COUNT(DISTINCT p.nama_pembeli) as total_pembeli_periode
+FROM pengajuan p 
+WHERE $where_p_sql";
+
+$res_kpi_p = mysqli_query($conn, $sql_kpi_p);
+$row_kpi_p = mysqli_fetch_assoc($res_kpi_p) ?: [
+    'total_trx' => 0,
+    'total_omzet_bruto' => 0.0,
+    'total_kas_diterima' => 0.0,
+    'total_piutang_berjalan' => 0.0,
+    'total_pembeli_periode' => 0
+];
+
+// ────────────────────────────────────────────────
+// 2. Filter Query Pengeluaran Kas (Tabel pengeluaran_header)
+// ────────────────────────────────────────────────
+$where_exp = ["1=1"];
+if ($periode === 'bulan_ini') {
+    $where_exp[] = "MONTH(tanggal) = MONTH(CURRENT_DATE()) AND YEAR(tanggal) = YEAR(CURRENT_DATE())";
+} elseif ($periode === 'tahun_ini') {
+    $where_exp[] = "YEAR(tanggal) = YEAR(CURRENT_DATE())";
+}
+$where_exp_sql = implode(" AND ", $where_exp);
+
+$sql_kpi_exp = "SELECT 
+    IFNULL(SUM(total_pengeluaran), 0) as total_pengeluaran_kas,
+    COUNT(id) as total_trx_exp
+FROM pengeluaran_header 
+WHERE $where_exp_sql";
+
+$res_kpi_exp = mysqli_query($conn, $sql_kpi_exp);
+$row_kpi_exp = mysqli_fetch_assoc($res_kpi_exp) ?: [
+    'total_pengeluaran_kas' => 0.0,
+    'total_trx_exp' => 0
+];
+
+// Metrik Keuangan Eksekutif Utama
+$total_omzet_bruto = (float)$row_kpi_p['total_omzet_bruto'];
+$pemasukan_riil = (float)$row_kpi_p['total_kas_diterima'];
+$total_piutang = (float)$row_kpi_p['total_piutang_berjalan'];
+$pengeluaran_kas = (float)$row_kpi_exp['total_pengeluaran_kas'];
+$estimasi_laba_bersih = $pemasukan_riil - $pengeluaran_kas;
+$total_trx = (int)$row_kpi_p['total_trx'];
+$total_trx_exp = (int)$row_kpi_exp['total_trx_exp'];
+
+// ────────────────────────────────────────────────
+// Respon AJAX jika diminta oleh filter frontend
+// ────────────────────────────────────────────────
+if ($is_ajax) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => true,
+        'periode' => $periode,
+        'status' => $status_filter,
+        'total_omzet_bruto' => $total_omzet_bruto,
+        'total_omzet_bruto_fmt' => formatRupiah($total_omzet_bruto),
+        'pemasukan_riil' => $pemasukan_riil,
+        'pemasukan_riil_fmt' => formatRupiah($pemasukan_riil),
+        'total_piutang' => $total_piutang,
+        'total_piutang_fmt' => formatRupiah($total_piutang),
+        'pengeluaran_kas' => $pengeluaran_kas,
+        'pengeluaran_kas_fmt' => formatRupiah($pengeluaran_kas),
+        'estimasi_laba_bersih' => $estimasi_laba_bersih,
+        'estimasi_laba_bersih_fmt' => formatRupiah($estimasi_laba_bersih),
+        'total_trx' => $total_trx,
+        'total_trx_exp' => $total_trx_exp,
+        'is_surplus' => ($estimasi_laba_bersih >= 0)
+    ]);
+    exit;
+}
+
+// ────────────────────────────────────────────────
+// Data Persediaan Stok & Klien
+// ────────────────────────────────────────────────
 $res_stok = mysqli_query($conn, "SELECT COUNT(id) as total_varian, IFNULL(SUM(stok), 0) as total_unit FROM jenis_barang");
-$row_stok = mysqli_fetch_assoc($res_stok);
+$row_stok = mysqli_fetch_assoc($res_stok) ?: ['total_varian' => 0, 'total_unit' => 0];
 
 $res_pembeli = mysqli_query($conn, "SELECT COUNT(DISTINCT nama_pembeli) as total_pembeli FROM pengajuan");
-$row_pembeli = mysqli_fetch_assoc($res_pembeli);
+$row_pembeli = mysqli_fetch_assoc($res_pembeli) ?: ['total_pembeli' => 0];
 
-// Data Grafik Barang Paling Banyak Terjual / Dikeluarkan
+// ────────────────────────────────────────────────
+// Data Grafik Barang Paling Banyak Terjual (Top 6)
+// ────────────────────────────────────────────────
 $query_top_sold = "SELECT 
-    nama_barang,
-    nama_jenis,
-    SUM(jumlah) as total_qty 
-FROM pengajuan_detail 
-GROUP BY nama_barang, nama_jenis 
+    d.nama_barang,
+    d.nama_jenis,
+    SUM(d.jumlah) as total_qty 
+FROM pengajuan_detail d 
+JOIN pengajuan p ON d.pengajuan_id = p.id 
+WHERE $where_p_sql 
+GROUP BY d.nama_barang, d.nama_jenis 
 ORDER BY total_qty DESC LIMIT 6";
 
 $res_top_sold = mysqli_query($conn, $query_top_sold);
@@ -34,21 +143,22 @@ if ($res_top_sold && mysqli_num_rows($res_top_sold) > 0) {
             $name .= ' (' . trim($s['nama_jenis']) . ')';
         }
         $name = trim(rtrim($name, ')'));
-
         $sold_labels[] = $name;
         $sold_values[] = (float)$s['total_qty'];
     }
 }
 if (empty($sold_labels)) {
-    $sold_labels = ['Belum Ada Data'];
+    $sold_labels = ['Belum Ada Transaksi'];
     $sold_values = [0];
 }
 
+// ────────────────────────────────────────────────
 // Data Grafik Pengadaan Bulanan
-$query_monthly = "SELECT DATE_FORMAT(created_at, '%b %Y') as m_label, SUM(CAST(estimasi_dana AS DECIMAL(15,2))) as total 
-                  FROM pengajuan 
-                  GROUP BY YEAR(created_at), MONTH(created_at) 
-                  ORDER BY created_at ASC LIMIT 12";
+// ────────────────────────────────────────────────
+$query_monthly = "SELECT DATE_FORMAT(p.created_at, '%b %Y') as m_label, SUM(CAST(p.estimasi_dana AS DECIMAL(15,2))) as total 
+                  FROM pengajuan p 
+                  GROUP BY YEAR(p.created_at), MONTH(p.created_at) 
+                  ORDER BY p.created_at ASC LIMIT 12";
 $res_monthly = mysqli_query($conn, $query_monthly);
 $month_labels = [];
 $month_values = [];
@@ -56,27 +166,44 @@ while ($m = mysqli_fetch_assoc($res_monthly)) {
     $month_labels[] = $m['m_label'];
     $month_values[] = (float)$m['total'];
 }
+if (empty($month_labels)) {
+    $month_labels = [date('M Y')];
+    $month_values = [0];
+}
 
-// Audit Persediaan Stok Barang Low Stock / Audit List
+// ────────────────────────────────────────────────
+// Audit Persediaan Stok Rendah
+// ────────────────────────────────────────────────
 $query_audit = "SELECT j.*, b.nama_barang 
                 FROM jenis_barang j 
                 JOIN stok_barang b ON j.barang_id = b.id 
                 ORDER BY j.stok ASC LIMIT 10";
 $res_audit = mysqli_query($conn, $query_audit);
-
 $audit_items = [];
 if ($res_audit) {
     while ($row = mysqli_fetch_assoc($res_audit)) {
         $audit_items[] = $row;
     }
 }
+
+// Label Periode untuk UI
+$periode_text_map = [
+    'bulan_ini' => 'Bulan Ini (' . date('F Y') . ')',
+    'tahun_ini' => 'Tahun Ini (' . date('Y') . ')',
+    'semua_waktu' => 'Sepanjang Waktu (All-Time)'
+];
+$status_text_map = [
+    'semua' => 'Semua Transaksi',
+    'lunas' => 'Hanya Lunas (100%)',
+    'piutang' => 'Hanya Piutang / Cicilan'
+];
 ?>
 
 <!-- HEADER CURVED EXECUTIVE BANNER -->
 <header class="page-header">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <span class="page-eyebrow"><i class="fa-solid fa-crown"></i> Executive Suite &middot; Adam Jaya Enterprise</span>
+            <span class="page-eyebrow"><i class="fa-solid fa-crown text-gold"></i> Executive Suite &middot; Adam Jaya Enterprise</span>
             <h1 class="page-title">Executive Management Dashboard</h1>
             <p class="page-subtitle">Ringkasan performa bisnis, audit persediaan, dan analisis tren pengadaan perusahaan.</p>
         </div>
@@ -94,62 +221,229 @@ if ($res_audit) {
     </div>
 </header>
 
-<!-- KPI Overview Cards -->
-<div class="row g-3 stats-row mb-4">
-    <div class="col-6 col-md-3 dash-reveal" style="--reveal-delay: 0.05s">
-        <div class="stats-card">
-            <div class="card-body">
-                <div class="stat-icon icon-wine"><i class="fa-solid fa-chart-line"></i></div>
+<!-- ========================================================
+     BAR FILTER INTERAKTIF REALTIME (STATUS & PERIODE)
+     ======================================================== -->
+<div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden" style="background: #ffffff; border: 1px solid rgba(122, 30, 51, 0.12) !important;">
+    <div class="card-body p-3 p-md-3.5">
+        <form id="filterExecutiveForm" method="GET" action="ceo.php" class="row g-3 align-items-center">
+            <div class="col-12 col-lg-auto d-flex align-items-center gap-2.5">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-3 shadow-sm" style="width: 42px; height: 42px; background: linear-gradient(135deg, #7A1E33 0%, #58101F 100%); color: #ffd700;">
+                    <i class="fa-solid fa-sliders fs-5"></i>
+                </div>
                 <div>
-                    <div class="stat-value"><?= formatRupiah($row_pengajuan['total_val']); ?></div>
-                    <div class="stat-label">Total Pengadaan (<?= $row_pengajuan['total_trx']; ?> Trx)</div>
+                    <h6 class="fw-bold text-wine mb-0" style="font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.3px;">Filter Dashboard Eksekutif</h6>
+                    <small class="text-muted" style="font-size: 0.76rem;">Kalkulasi realtime indikator keuangan perusahaan</small>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label class="form-label small fw-bold text-muted mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-calendar-days text-wine"></i> Periode Waktu:
+                </label>
+                <select name="periode" id="filterPeriode" class="form-select fw-semibold border-secondary-subtle" onchange="triggerFilterChange()">
+                    <option value="bulan_ini" <?= $periode === 'bulan_ini' ? 'selected' : ''; ?>>Bulan Ini (<?= date('M Y'); ?>)</option>
+                    <option value="tahun_ini" <?= $periode === 'tahun_ini' ? 'selected' : ''; ?>>Tahun Ini (<?= date('Y'); ?>)</option>
+                    <option value="semua_waktu" <?= $periode === 'semua_waktu' ? 'selected' : ''; ?>>Sepanjang Waktu (All-Time)</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label class="form-label small fw-bold text-muted mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-receipt text-wine"></i> Status Transaksi:
+                </label>
+                <select name="status" id="filterStatus" class="form-select fw-semibold border-secondary-subtle" onchange="triggerFilterChange()">
+                    <option value="semua" <?= $status_filter === 'semua' ? 'selected' : ''; ?>>Semua Transaksi</option>
+                    <option value="lunas" <?= $status_filter === 'lunas' ? 'selected' : ''; ?>>Hanya Lunas (Lunas Penuh)</option>
+                    <option value="piutang" <?= $status_filter === 'piutang' ? 'selected' : ''; ?>>Hanya Piutang (Belum Lunas / Cicilan)</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-lg d-flex justify-content-lg-end align-items-center gap-2 pt-lg-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="resetFilter()" title="Kembalikan ke Default">
+                    <i class="fa-solid fa-arrow-rotate-left me-1"></i> Reset
+                </button>
+                <div id="filterSpinner" class="spinner-border spinner-border-sm text-wine d-none" role="status" aria-hidden="true"></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================
+     5 KARTU RINGKASAN KPI KEUANGAN EKSEKUTIF UTAMA
+     ======================================================== -->
+<div class="row g-3 stats-row mb-3">
+    <!-- 1. Total Omzet / Transaksi (Bruto) -->
+    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.05s">
+        <div class="stats-card h-100 position-relative border-top border-4 border-wine shadow-sm">
+            <div class="card-body p-3.5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-wine-subtle text-wine border border-wine-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
+                        OMZET BRUTO
+                    </span>
+                    <div class="stat-icon icon-wine m-0" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-file-invoice-dollar fs-5"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="stat-value text-dark fw-bolder" id="kpi_omzet_bruto" style="font-size: 1.55rem; letter-spacing: -0.5px;">
+                        <?= formatRupiah($total_omzet_bruto); ?>
+                    </div>
+                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Total Omzet / Transaksi (Bruto)</div>
+                    <small class="text-secondary d-block mt-0.5" id="kpi_omzet_sub" style="font-size: 0.75rem;">
+                        Total transaksi pembelian (<?= number_format($total_trx); ?> Pengadaan)
+                    </small>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3 dash-reveal" style="--reveal-delay: 0.15s">
-        <div class="stats-card">
-            <div class="card-body">
-                <div class="stat-icon icon-gold"><i class="fa-solid fa-wallet"></i></div>
+
+    <!-- 2. Pemasukan Riil (Kas Diterima / Lunas & DP) -->
+    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.12s">
+        <div class="stats-card h-100 position-relative border-top border-4 border-success shadow-sm">
+            <div class="card-body p-3.5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
+                        KAS MASUK RIIL
+                    </span>
+                    <div class="stat-icon icon-success m-0" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-hand-holding-dollar fs-5"></i>
+                    </div>
+                </div>
                 <div>
-                    <div class="stat-value"><?= formatRupiah($row_pengeluaran['total_exp']); ?></div>
-                    <div class="stat-label">Kas Pengeluaran</div>
+                    <div class="stat-value text-success fw-bolder" id="kpi_pemasukan_riil" style="font-size: 1.55rem; letter-spacing: -0.5px;">
+                        <?= formatRupiah($pemasukan_riil); ?>
+                    </div>
+                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Pemasukan Riil (Kas Diterima)</div>
+                    <small class="text-secondary d-block mt-0.5" style="font-size: 0.75rem;">
+                        Uang kas nyata diterima (Lunas & DP)
+                    </small>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3 dash-reveal" style="--reveal-delay: 0.25s">
-        <div class="stats-card">
-            <div class="card-body">
-                <div class="stat-icon icon-success"><i class="fa-solid fa-boxes-stacked"></i></div>
-                <div>
-                    <div class="stat-value"><?= format_stok($row_stok['total_unit']); ?> Total Stok</div>
-                    <div class="stat-label">Stok (<?= $row_stok['total_varian']; ?> Varian)</div>
+
+    <!-- 3. Total Piutang Berjalan (Belum Lunas / Sisa) -->
+    <div class="col-12 col-sm-6 col-xl-4 dash-reveal" style="--reveal-delay: 0.19s">
+        <div class="stats-card h-100 position-relative border-top border-4 border-warning shadow-sm">
+            <div class="card-body p-3.5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
+                        PIUTANG BERJALAN
+                    </span>
+                    <div class="stat-icon icon-gold m-0" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-clock-rotate-left fs-5"></i>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3 dash-reveal" style="--reveal-delay: 0.35s">
-        <div class="stats-card">
-            <div class="card-body">
-                <div class="stat-icon icon-danger"><i class="fa-solid fa-users"></i></div>
                 <div>
-                    <div class="stat-value"><?= $row_pembeli['total_pembeli']; ?> Pembeli</div>
-                    <div class="stat-label">Klien Pelanggan Aktif</div>
+                    <div class="stat-value text-warning fw-bolder" id="kpi_piutang_berjalan" style="font-size: 1.55rem; letter-spacing: -0.5px;">
+                        <?= formatRupiah($total_piutang); ?>
+                    </div>
+                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.82rem;">Total Piutang Berjalan</div>
+                    <small class="text-secondary d-block mt-0.5" style="font-size: 0.75rem;">
+                        Tagihan belum lunas di tangan pelanggan
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- SECTION ANALISIS EXEC: CHART PENGELUARAN & TREN PENGADAAN (DIBUAT TERINTEGRASI DALAM 1 DASHBOARD EXECUTIVE) -->
+<div class="row g-3 stats-row mb-4">
+    <!-- 4. Pengeluaran Kas Operasional -->
+    <div class="col-12 col-md-6 dash-reveal" style="--reveal-delay: 0.26s">
+        <div class="stats-card h-100 position-relative border-top border-4 border-danger shadow-sm">
+            <div class="card-body p-3.5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold" style="font-size: 0.72rem; padding: 4px 8px;">
+                        KAS KELUAR OPERASIONAL
+                    </span>
+                    <div class="stat-icon icon-danger m-0" style="width: 40px; height: 40px;">
+                        <i class="fa-solid fa-arrow-trend-down fs-5"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="stat-value text-danger fw-bolder" id="kpi_pengeluaran_kas" style="font-size: 1.65rem; letter-spacing: -0.5px;">
+                        <?= formatRupiah($pengeluaran_kas); ?>
+                    </div>
+                    <div class="stat-label text-muted fw-semibold mt-1" style="font-size: 0.84rem;">Pengeluaran Kas Operasional</div>
+                    <small class="text-secondary d-block mt-0.5" id="kpi_pengeluaran_sub" style="font-size: 0.76rem;">
+                        Biaya operasional kas (<?= number_format($total_trx_exp); ?> Transaksi)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- 5. Estimasi Laba / Untung Bersih (Hero Executive Card) -->
+    <div class="col-12 col-md-6 dash-reveal" style="--reveal-delay: 0.33s">
+        <div class="card h-100 position-relative rounded-3 shadow-sm overflow-hidden" style="background: linear-gradient(135deg, #1A0308 0%, #3d0a15 60%, #58101F 100%); border: 1.5px solid #C9973E;">
+            <div class="card-body p-3.5 d-flex flex-column justify-content-between text-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge px-2.5 py-1 fw-bold" style="background: rgba(201, 151, 62, 0.25); color: #ffd700; border: 1px solid rgba(201, 151, 62, 0.5); font-size: 0.72rem;">
+                        <i class="fa-solid fa-crown me-1 text-gold"></i> NET CASH PROFIT
+                    </span>
+                    <div id="kpi_laba_badge">
+                        <?php if ($estimasi_laba_bersih >= 0): ?>
+                            <span class="badge bg-success px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;">
+                                <i class="fa-solid fa-circle-check me-1"></i> Surplus Kas
+                            </span>
+                        <?php else: ?>
+                            <span class="badge bg-danger px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;">
+                                <i class="fa-solid fa-circle-exclamation me-1"></i> Defisit Kas
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="stat-value fw-bolder mb-1" id="kpi_laba_bersih" style="font-size: 1.95rem; color: #ffd700 !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: -0.5px;">
+                        <?= formatRupiah($estimasi_laba_bersih); ?>
+                    </div>
+                    <div class="fw-bold" style="color: #f1ebd8; font-size: 0.9rem;">
+                        Estimasi Laba / Untung Bersih
+                    </div>
+                    <small style="color: rgba(255,255,255,0.78); font-size: 0.76rem;">
+                        Kalkulasi: Pemasukan Kas Diterima &minus; Pengeluaran Kas Operasional
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Strip Persediaan & Pelanggan Aktif -->
+<div class="p-2.5 px-3 mb-4 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm border" style="background: #ffffff; border-color: rgba(0,0,0,0.06) !important;">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked text-wine"></i>
+            <span class="small text-muted">Persediaan Gudang:</span>
+            <strong class="small text-dark"><?= format_stok($row_stok['total_unit']); ?> Unit (<?= $row_stok['total_varian']; ?> Varian)</strong>
+        </div>
+        <div class="vr d-none d-sm-block" style="height: 18px;"></div>
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-users text-wine"></i>
+            <span class="small text-muted">Pelanggan Aktif:</span>
+            <strong class="small text-dark"><?= number_format($row_pembeli['total_pembeli']); ?> Klien Terdaftar</strong>
+        </div>
+    </div>
+    <div>
+        <span class="badge bg-light text-secondary border px-2.5 py-1 fw-semibold" style="font-size: 0.74rem;">
+            <i class="fa-solid fa-filter me-1 text-wine"></i>
+            <?= $periode_text_map[$periode] ?? 'Bulan Ini'; ?> &bull; <?= $status_text_map[$status_filter] ?? 'Semua'; ?>
+        </span>
+    </div>
+</div>
+
+<!-- ========================================================
+     SECTION ANALISIS EXEC: CHART PENGADAAN & BARANG TERJUAL
+     ======================================================== -->
 <div class="row g-4 mb-4">
-    <div class="col-md-6 dash-reveal" style="--reveal-delay: 0.45s">
+    <div class="col-md-6 dash-reveal" style="--reveal-delay: 0.40s">
         <div class="glass-card p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-chart-column text-wine me-2"></i> Tren Nilai Pengadaan Bulanan</h5>
-                <span class="badge bg-gold-soft text-wine small fw-bold">Performa Periode</span>
+                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-chart-column text-wine me-2"></i> Tren Nilai Pengadaan</h5>
+                <span class="badge bg-gold-soft text-wine small fw-bold">Grafik Pertumbuhan</span>
             </div>
             <div style="position: relative; height: 260px;">
                 <canvas id="chartPengadaan"></canvas>
@@ -157,7 +451,7 @@ if ($res_audit) {
         </div>
     </div>
 
-    <div class="col-md-6 dash-reveal" style="--reveal-delay: 0.55s">
+    <div class="col-md-6 dash-reveal" style="--reveal-delay: 0.48s">
         <div class="glass-card p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-fire text-wine me-2"></i> Barang Paling Banyak Terjual</h5>
@@ -170,7 +464,9 @@ if ($res_audit) {
     </div>
 </div>
 
-<!-- AUDIT STOK DAFTAR PERSEDIAAN BARANG -->
+<!-- ========================================================
+     AUDIT STOK DAFTAR PERSEDIAAN BARANG
+     ======================================================== -->
 <div class="table-container mb-4">
     <div class="table-container-header d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-bottom">
         <h2 class="mb-0"><i class="fa-solid fa-shield-halved me-2 text-wine"></i> Audit Persediaan Stok Varian Terendah</h2>
@@ -220,7 +516,7 @@ if ($res_audit) {
         </table>
     </div>
 
-    <!-- MOBILE VIEW (2 Columns Grid / Dua Jajar Ke Bawah - Lega & Rapi) -->
+    <!-- MOBILE VIEW (2 Columns Grid) -->
     <div class="d-block d-md-none p-3">
         <div class="row g-3">
             <?php foreach ($audit_items as $audit): 
@@ -269,6 +565,84 @@ if ($res_audit) {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+// ────────────────────────────────────────────────
+// Logika Interaktif Filter Dashboard Eksekutif
+// ────────────────────────────────────────────────
+function triggerFilterChange() {
+    const periode = document.getElementById('filterPeriode').value;
+    const status = document.getElementById('filterStatus').value;
+    const spinner = document.getElementById('filterSpinner');
+    if (spinner) spinner.classList.remove('d-none');
+
+    // Update query URL di address bar tanpa reload paksa
+    const url = new URL(window.location.href);
+    url.searchParams.set('periode', periode);
+    url.searchParams.set('status', status);
+    window.history.replaceState({ periode, status }, '', url.toString());
+
+    // Ambil data terbaru via AJAX
+    fetch(`ceo.php?ajax=1&periode=${encodeURIComponent(periode)}&status=${encodeURIComponent(status)}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Network error');
+            return res.json();
+        })
+        .then(data => {
+            if (spinner) spinner.classList.add('d-none');
+            if (data && data.success) {
+                // Perbarui nilai kartu dengan efek transisi mulus
+                animateCardValue('kpi_omzet_bruto', data.total_omzet_bruto_fmt);
+                animateCardValue('kpi_pemasukan_riil', data.pemasukan_riil_fmt);
+                animateCardValue('kpi_piutang_berjalan', data.total_piutang_fmt);
+                animateCardValue('kpi_pengeluaran_kas', data.pengeluaran_kas_fmt);
+                animateCardValue('kpi_laba_bersih', data.estimasi_laba_bersih_fmt);
+
+                // Update sub label transaksi
+                const omzetSub = document.getElementById('kpi_omzet_sub');
+                if (omzetSub) {
+                    omzetSub.innerText = `Total transaksi pembelian (${data.total_trx} Pengadaan)`;
+                }
+                const expSub = document.getElementById('kpi_pengeluaran_sub');
+                if (expSub) {
+                    expSub.innerText = `Biaya operasional kas (${data.total_trx_exp} Transaksi)`;
+                }
+
+                // Update badge surplus/defisit
+                const badgeEl = document.getElementById('kpi_laba_badge');
+                if (badgeEl) {
+                    if (data.is_surplus) {
+                        badgeEl.innerHTML = `<span class="badge bg-success px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-check me-1"></i> Surplus Kas</span>`;
+                    } else {
+                        badgeEl.innerHTML = `<span class="badge bg-danger px-2.5 py-1 text-white fw-bold shadow-sm" style="font-size: 0.72rem;"><i class="fa-solid fa-circle-exclamation me-1"></i> Defisit Kas</span>`;
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            if (spinner) spinner.classList.add('d-none');
+            // Fallback submit form biasa jika AJAX terkendala
+            document.getElementById('filterExecutiveForm').submit();
+        });
+}
+
+function animateCardValue(id, newText) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
+    el.style.opacity = '0.25';
+    el.style.transform = 'scale(0.96)';
+    setTimeout(() => {
+        el.innerText = newText;
+        el.style.opacity = '1';
+        el.style.transform = 'scale(1)';
+    }, 150);
+}
+
+function resetFilter() {
+    document.getElementById('filterPeriode').value = 'bulan_ini';
+    document.getElementById('filterStatus').value = 'semua';
+    triggerFilterChange();
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
     // ── Staggered reveal (cards & chart containers) ──
@@ -332,7 +706,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // ────────────────────────────────────────────────
-    // Chart 2: Bar — Tren Nilai Pengadaan Bulanan (Tumbuh 1 per 1 dari 0)
+    // Chart 2: Bar — Tren Nilai Pengadaan Bulanan
     // ────────────────────────────────────────────────
     const barData   = <?= json_encode($month_values); ?>;
     const barLabels = <?= json_encode($month_labels); ?>;

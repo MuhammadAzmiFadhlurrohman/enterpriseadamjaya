@@ -26,54 +26,87 @@ $initial_letter = strtoupper(substr($user['username'], 0, 1));
     
     <!-- Global JavaScript Helper Functions (Pre-loaded in Head) -->
     <script>
+        function parseQtyJS(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            let s = String(val).trim();
+            if (s === '') return 0;
+
+            if (s.indexOf('.') !== -1 && s.indexOf(',') !== -1) {
+                if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                    s = s.replace(/\./g, '').replace(',', '.');
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (s.indexOf(',') !== -1) {
+                s = s.replace(',', '.');
+            }
+            return parseFloat(s) || 0;
+        }
+
         function formatRupiahJS(angka, prefix = 'Rp ') {
-            if (angka === null || angka === undefined || angka === '') return '';
+            if (angka === null || angka === undefined || angka === '') return (prefix || '') + '0';
 
             let num = null;
             if (typeof angka === 'number') {
                 num = angka;
             } else {
                 let strVal = String(angka).trim();
-                if (strVal === '') return '';
+                if (strVal === '') return (prefix || '') + '0';
 
-                // MySQL decimal string or pure numeric like "100000.00" or "50.50"
                 if (/^-?\d+(\.\d+)?$/.test(strVal) && !strVal.startsWith('Rp') && !strVal.includes(',')) {
                     num = parseFloat(strVal);
                 } else {
-                    let clean = strVal.replace(/[^0-9,-]/g, '').replace(',', '.');
-                    num = parseFloat(clean);
+                    num = unformatRupiahJS(strVal);
                 }
             }
 
-            if (isNaN(num)) return '';
+            if (isNaN(num)) return (prefix || '') + '0';
 
-            // Bulatkan ke 2 desimal untuk menghilangkan artefak IEEE-754 (contoh: 4.4 * 55000 = 242000.00000000003)
-            let rounded = Math.round(num * 100) / 100;
+            let isNeg = num < 0;
+            let absNum = Math.abs(num);
+            let rounded = Math.round(absNum * 100) / 100;
 
-            // Jika bilangan bulat murni (tanpa pecahan sen)
             if (Math.abs(rounded - Math.round(rounded)) < 0.00001) {
                 let intPart = String(Math.round(rounded)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                return prefix ? prefix + intPart : intPart;
+                return (isNeg ? '-' : '') + (prefix ? prefix + intPart : intPart);
             }
 
-            // Jika terdapat pecahan sen non-nol
             let parts = rounded.toFixed(2).split('.');
             let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             let decPart = ',' + parts[1].replace(/0+$/, '');
-            return prefix ? prefix + intPart + decPart : intPart + decPart;
+            return (isNeg ? '-' : '') + (prefix ? prefix + intPart + decPart : intPart + decPart);
         }
 
         function unformatRupiah(str) {
             if (str === null || str === undefined || str === '') return 0;
-            if (typeof str === 'number') return str;
+            if (typeof str === 'number') return isNaN(str) ? 0 : str;
             let s = String(str).trim();
             if (s === '') return 0;
 
-            if (/^-?\d+\.\d+$/.test(s) && !s.includes(',') && !s.startsWith('Rp')) {
+            if (/^-?\d+(\.\d+)?$/.test(s) && !s.includes(',') && !s.startsWith('Rp')) {
                 return parseFloat(s) || 0;
             }
 
-            let cleaned = s.replace(/[^0-9,-]/g, '').replace(',', '.');
+            let cleaned = s.replace(/[^0-9,.-]/g, '');
+            if (!cleaned) return 0;
+
+            if (cleaned.includes('.') && cleaned.includes(',')) {
+                if (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')) {
+                    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+                } else {
+                    cleaned = cleaned.replace(/,/g, '');
+                }
+            } else if (cleaned.includes(',')) {
+                cleaned = cleaned.replace(',', '.');
+            } else if (cleaned.includes('.')) {
+                if (/^\d+\.\d{1,2}$/.test(cleaned)) {
+                    // 1-2 desimal
+                } else {
+                    cleaned = cleaned.replace(/\./g, '');
+                }
+            }
+
             return parseFloat(cleaned) || 0;
         }
 
@@ -88,14 +121,56 @@ $initial_letter = strtoupper(substr($user['username'], 0, 1));
         function formatRupiahInput(input) {
             if (!input) return;
             let val = input.value;
-            let clean = String(val).replace(/\D/g, '');
-            if (!clean) {
+            if (val === null || val === undefined || val === '') return;
+
+            let isNeg = String(val).trim().startsWith('-');
+            let s = String(val).replace(/^Rp\s*/i, '').replace(/[^0-9,.-]/g, '');
+            if (!s) {
                 input.value = '';
                 return;
             }
-            input.value = 'Rp ' + clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            let hasComma = s.includes(',');
+            let intPart = '';
+            let decPart = '';
+            let trailingComma = false;
+
+            if (hasComma) {
+                let parts = s.split(',');
+                intPart = parts[0].replace(/\D/g, '');
+                decPart = parts.slice(1).join('').replace(/\D/g, '').slice(0, 4);
+                trailingComma = s.endsWith(',') && decPart.length === 0;
+            } else {
+                if (s.endsWith('.')) {
+                    intPart = s.slice(0, -1).replace(/\D/g, '');
+                    trailingComma = true;
+                } else if (/^\d+\.\d{1,2}$/.test(s)) {
+                    let parts = s.split('.');
+                    intPart = parts[0];
+                    decPart = parts[1];
+                } else {
+                    intPart = s.replace(/\D/g, '');
+                }
+            }
+
+            if (!intPart && !decPart && !trailingComma) {
+                input.value = '';
+                return;
+            }
+
+            let formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0';
+            let res = 'Rp ' + (isNeg ? '-' : '') + formattedInt;
+            if (trailingComma) {
+                res += ',';
+            } else if (decPart.length > 0) {
+                res += ',' + decPart;
+            }
+
+            input.value = res;
         }
 
+        window.parseQty = parseQtyJS;
+        window.parseQtyJS = parseQtyJS;
         window.unformatRupiah = unformatRupiah;
         window.unformatRupiahJS = unformatRupiah;
         window.formatRupiah = formatRupiah;
