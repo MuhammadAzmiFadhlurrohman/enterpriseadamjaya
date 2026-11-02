@@ -72,8 +72,9 @@ $total_induk = mysqli_num_rows($result);
 
             <div class="mb-3">
                 <label class="form-label text-muted small fw-bold">Gambar Barang (Opsional)</label>
-                <input type="file" name="gambar" class="form-control" accept="image/*">
-                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">JPG, PNG, GIF (max 10MB)</small>
+                <input type="file" name="gambar" class="form-control" accept="image/*" onchange="previewUpload(this, 'preview_add_top')">
+                <div id="preview_add_top" class="mt-2" style="display:none;"></div>
+                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">JPG, JPEG, PNG, WEBP, GIF, JFIF (Maks 10MB)</small>
             </div>
 
             <button type="submit" class="btn text-white w-100 py-2.5 fw-bold rounded-3 shadow-sm fs-6" style="background: linear-gradient(135deg, #7A1E33 0%, #5A1224 100%); border: none;">
@@ -148,14 +149,30 @@ $total_induk = mysqli_num_rows($result);
                                 <span class="fw-semibold text-muted"><?= $no_b++; ?></span>
                             </td>
                             <td data-label="Gambar">
-                                <?php if (!empty($b['gambar']) && file_exists(__DIR__ . '/' . $b['gambar'])): ?>
-                                    <img src="<?= e($b['gambar']); ?>" 
+                                <?php 
+                                $g_raw = $b['gambar'] ?? '';
+                                $g_clean = ltrim($g_raw, '/\\');
+                                $g_found = false;
+                                $g_url = '';
+
+                                if (!empty($g_clean)) {
+                                    if (file_exists(__DIR__ . '/' . $g_clean)) {
+                                        $g_found = true;
+                                        $g_url = $g_clean;
+                                    } elseif (file_exists(dirname(__DIR__) . '/adamjaya-enterprise/' . $g_clean)) {
+                                        $g_found = true;
+                                        $g_url = '../adamjaya-enterprise/' . $g_clean;
+                                    }
+                                }
+                                ?>
+                                <?php if ($g_found): ?>
+                                    <img src="<?= e($g_url); ?>" 
                                          alt="<?= e($b['nama_barang']); ?>" 
                                          class="rounded border shadow-sm" 
                                          style="width: 46px; height: 46px; object-fit: cover; cursor: pointer; transition: transform 0.2s;" 
                                          onmouseover="this.style.transform='scale(1.1)'" 
                                          onmouseout="this.style.transform='scale(1)'" 
-                                         onclick="previewImage('<?= e($b['gambar']); ?>', '<?= e(addslashes($b['nama_barang'])); ?>')"
+                                         onclick="previewImage('<?= e($g_url); ?>', '<?= e(addslashes($b['nama_barang'])); ?>')"
                                          title="Klik untuk memperbesar gambar">
                                 <?php else: ?>
                                     <div class="bg-light text-muted border rounded d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
@@ -246,7 +263,9 @@ $total_induk = mysqli_num_rows($result);
 
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">GAMBAR PRODUK (OPSIONAL)</label>
-                        <input type="file" name="gambar" class="form-control" accept="image/*">
+                        <input type="file" name="gambar" class="form-control" accept="image/*" onchange="previewUpload(this, 'preview_add_modal')">
+                        <div id="preview_add_modal" class="mt-2" style="display:none;"></div>
+                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">JPG, JPEG, PNG, WEBP, GIF, JFIF (Maks 10MB)</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -280,8 +299,16 @@ $total_induk = mysqli_num_rows($result);
 
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-semibold">GANTI GAMBAR PRODUK (OPSIONAL)</label>
-                        <input type="file" name="gambar" class="form-control" accept="image/*">
+                        <input type="file" name="gambar" id="edit_file_gambar" class="form-control" accept="image/*" onchange="previewUpload(this, 'edit_gambar_preview_new')">
+                        <div id="edit_gambar_preview_new" class="mt-2" style="display:none;"></div>
                         <div id="edit_gambar_preview" class="mt-2"></div>
+                        <div id="edit_hapus_gambar_wrapper" class="form-check mt-2" style="display:none;">
+                            <input class="form-check-input" type="checkbox" name="hapus_gambar" value="1" id="hapusGambarCheck">
+                            <label class="form-check-label text-danger small fw-semibold" for="hapusGambarCheck">
+                                <i class="fa-solid fa-trash-can me-1"></i> Hapus gambar produk saat ini
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">JPG, JPEG, PNG, WEBP, GIF, JFIF (Maks 10MB)</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -295,6 +322,71 @@ $total_induk = mysqli_num_rows($result);
 <?php endif; ?>
 
 <script>
+function previewUpload(input, targetId) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validasi ekstensi di frontend
+        const ext = file.name.split('.').pop().toLowerCase();
+        const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'jfif', 'avif', 'bmp'];
+        if (!allowed.includes(ext)) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Format Tidak Didukung',
+                    text: 'Format file "' + ext + '" tidak didukung. Silakan gunakan format JPG, PNG, WEBP, GIF, atau JFIF.',
+                    confirmButtonColor: '#7A1E33'
+                });
+            } else {
+                alert('Format file "' + ext + '" tidak didukung. Silakan gunakan JPG, PNG, WEBP, GIF, atau JFIF.');
+            }
+            input.value = '';
+            target.style.display = 'none';
+            target.innerHTML = '';
+            return;
+        }
+
+        // Validasi ukuran di frontend (maks 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ukuran Gambar Terlalu Besar',
+                    text: 'Ukuran file gambar maksimal 10MB. File Anda: ' + sizeMB + ' MB.',
+                    confirmButtonColor: '#7A1E33'
+                });
+            } else {
+                alert('Ukuran file gambar maksimal 10MB. File Anda: ' + sizeMB + ' MB.');
+            }
+            input.value = '';
+            target.style.display = 'none';
+            target.innerHTML = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            target.style.display = 'block';
+            target.innerHTML = `
+                <div class="d-flex align-items-center gap-2 p-2 border rounded-3 bg-light shadow-sm">
+                    <img src="${e.target.result}" class="rounded border" style="width: 52px; height: 52px; object-fit: cover;">
+                    <div class="small flex-grow-1 overflow-hidden">
+                        <span class="fw-bold text-dark d-block text-truncate">${file.name}</span>
+                        <span class="text-muted" style="font-size:0.75rem;">${(file.size / 1024).toFixed(1)} KB &middot; <span class="text-success fw-semibold"><i class="fa-solid fa-check-circle me-1"></i>Siap diupload</span></span>
+                    </div>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        target.style.display = 'none';
+        target.innerHTML = '';
+    }
+}
+
 function filterTableLive(query) {
     if (query !== undefined) {
         sessionStorage.setItem('stok_barang_search', query);
@@ -321,12 +413,36 @@ function previewImage(src, title) {
 function editBarang(barang) {
     document.getElementById('edit_id').value = barang.id;
     document.getElementById('edit_nama_barang').value = barang.nama_barang;
+
+    // Reset input file & preview upload baru
+    const fileInput = document.getElementById('edit_file_gambar');
+    if (fileInput) fileInput.value = '';
+    const newPreview = document.getElementById('edit_gambar_preview_new');
+    if (newPreview) {
+        newPreview.style.display = 'none';
+        newPreview.innerHTML = '';
+    }
+
+    const hapusWrapper = document.getElementById('edit_hapus_gambar_wrapper');
+    const hapusCheck = document.getElementById('hapusGambarCheck');
+    if (hapusCheck) hapusCheck.checked = false;
     
     const preview = document.getElementById('edit_gambar_preview');
     if (barang.gambar) {
-        preview.innerHTML = `<small class="text-muted d-block mb-1">Gambar Saat Ini:</small><img src="${barang.gambar}" class="rounded border" style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;" onclick="previewImage('${barang.gambar}', '${barang.nama_barang.replace(/'/g, "\\'")}')">`;
+        preview.innerHTML = `
+            <small class="text-muted d-block mb-1 fw-semibold">Gambar Saat Ini:</small>
+            <div class="d-flex align-items-center gap-2 p-2 border rounded-3 bg-light">
+                <img src="${barang.gambar}" class="rounded border shadow-sm" style="width: 52px; height: 52px; object-fit: cover; cursor: pointer;" onclick="previewImage('${barang.gambar}', '${barang.nama_barang.replace(/'/g, "\\'")}')" title="Klik untuk memperbesar">
+                <div class="small">
+                    <span class="text-dark fw-bold d-block">Gambar terpasang</span>
+                    <span class="text-muted" style="font-size:0.75rem;">Klik gambar untuk memperbesar</span>
+                </div>
+            </div>
+        `;
+        if (hapusWrapper) hapusWrapper.style.display = 'block';
     } else {
-        preview.innerHTML = '';
+        preview.innerHTML = '<span class="badge bg-secondary-subtle text-muted px-2.5 py-1 rounded-pill"><i class="fa-solid fa-circle-info me-1"></i> Belum ada gambar produk</span>';
+        if (hapusWrapper) hapusWrapper.style.display = 'none';
     }
 
     const editModal = new bootstrap.Modal(document.getElementById('editBarangModal'));
