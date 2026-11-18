@@ -6,6 +6,9 @@ $is_admin = is_admin();
 
 // Parameter Filter (Default bulan ini)
 $bulan = isset($_GET['bulan']) ? sanitize($_GET['bulan']) : date('m');
+if ($bulan !== '') {
+    $bulan = str_pad((string)(int)$bulan, 2, '0', STR_PAD_LEFT);
+}
 $tahun = sanitize($_GET['tahun'] ?? date('Y'));
 $status_pembayaran = sanitize($_GET['status_pembayaran'] ?? '');
 $status_pengiriman = sanitize($_GET['status_pengiriman'] ?? '');
@@ -188,8 +191,10 @@ while ($row = mysqli_fetch_assoc($result)) {
                         '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
                     ];
                     foreach ($months as $m_num => $m_name): 
+                        $m_val = str_pad((string)$m_num, 2, '0', STR_PAD_LEFT);
+                        $is_sel = ($bulan !== '' && (int)$bulan === (int)$m_num);
                     ?>
-                        <option value="<?= $m_num; ?>" <?= ($bulan === $m_num) ? 'selected' : ''; ?>><?= $m_name; ?></option>
+                        <option value="<?= $m_val; ?>" <?= $is_sel ? 'selected' : ''; ?>><?= $m_name; ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

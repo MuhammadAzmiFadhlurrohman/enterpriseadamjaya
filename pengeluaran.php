@@ -6,14 +6,24 @@ $is_admin = is_admin();
 
 // Filter
 $bulan = sanitize($_GET['bulan'] ?? '');
+if ($bulan !== '') {
+    $bulan = str_pad((string)(int)$bulan, 2, '0', STR_PAD_LEFT);
+}
 $tahun = sanitize($_GET['tahun'] ?? date('Y'));
-$current_filter_url = 'pengeluaran.php?' . http_build_query(['bulan' => $bulan, 'tahun' => $tahun]);
+$search = sanitize($_GET['search'] ?? '');
+
+$filter_query_params = [];
+if ($bulan !== '') $filter_query_params['bulan'] = $bulan;
+if (!empty($tahun)) $filter_query_params['tahun'] = $tahun;
+if (!empty($search)) $filter_query_params['search'] = $search;
+
+$current_filter_url = 'pengeluaran.php' . (!empty($filter_query_params) ? '?' . http_build_query($filter_query_params) : '');
 
 $where_clauses = ["1=1"];
 $params = [];
 $types = "";
 
-if (!empty($bulan)) {
+if ($bulan !== '') {
     $where_clauses[] = "MONTH(h.tanggal) = ?";
     $params[] = (int)$bulan;
     $types .= "i";
@@ -25,14 +35,23 @@ if (!empty($tahun)) {
     $types .= "i";
 }
 
+if (!empty($search)) {
+    // Pencarian berdasarkan keterangan / beban kas, ID nota, atau nama item rincian
+    $where_clauses[] = "(h.keterangan LIKE ? OR h.custom_id LIKE ? OR EXISTS (SELECT 1 FROM pengeluaran_detail d_s WHERE d_s.pengeluaran_id = h.id AND d_s.nama_item LIKE ?))";
+    $s_term = "%" . $search . "%";
+    $params[] = $s_term;
+    $params[] = $s_term;
+    $params[] = $s_term;
+    $types .= "sss";
+}
+
 $where_sql = implode(" AND ", $where_clauses);
 
-$query = "SELECT h.*, u.username, COUNT(d.id) as total_items 
+$query = "SELECT h.*, u.username, 
+          (SELECT COUNT(*) FROM pengeluaran_detail d WHERE d.pengeluaran_id = h.id) as total_items 
           FROM pengeluaran_header h 
           JOIN users u ON h.user_id = u.id 
-          LEFT JOIN pengeluaran_detail d ON h.id = d.pengeluaran_id 
           WHERE $where_sql 
-          GROUP BY h.id 
           ORDER BY h.tanggal DESC, h.created_at DESC, h.id DESC";
 
 $stmt = mysqli_prepare($conn, $query);
@@ -96,12 +115,12 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 <!-- Filter Card Bar -->
 <div class="filter-card">
-    <form method="GET" action="pengeluaran.php">
+    <form method="GET" action="pengeluaran.php" id="formFilterPengeluaran" data-no-loader>
         <div class="filter-row">
             <div class="filter-group">
                 <label>FILTER BULAN</label>
-                <select name="bulan" class="form-select">
-                    <option value="">Semua Bulan</option>
+                <select name="bulan" id="filterBulan" class="form-select" onchange="this.form.submit()">
+                    <option value="" <?= ($bulan === '') ? 'selected' : ''; ?>>Semua Bulan</option>
                     <?php 
                     $months = [
                         '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
@@ -109,17 +128,19 @@ while ($row = mysqli_fetch_assoc($result)) {
                         '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
                     ];
                     foreach ($months as $m_num => $m_name): 
+                        $m_val = str_pad((string)$m_num, 2, '0', STR_PAD_LEFT);
+                        $is_sel = ($bulan !== '' && (int)$bulan === (int)$m_num);
                     ?>
-                        <option value="<?= $m_num; ?>" <?= ($bulan === $m_num) ? 'selected' : ''; ?>><?= $m_name; ?></option>
+                        <option value="<?= $m_val; ?>" <?= $is_sel ? 'selected' : ''; ?>><?= $m_name; ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label>FILTER TAHUN</label>
-                <select name="tahun" class="form-select">
+                <select name="tahun" id="filterTahun" class="form-select" onchange="this.form.submit()">
                     <?php for ($y = date('Y'); $y >= 2024; $y--): ?>
-                        <option value="<?= $y; ?>" <?= ($tahun == $y) ? 'selected' : ''; ?>><?= $y; ?></option>
+                        <option value="<?= $y; ?>" <?= ((string)$tahun === (string)$y) ? 'selected' : ''; ?>><?= $y; ?></option>
                     <?php endfor; ?>
                 </select>
             </div>
@@ -129,6 +150,33 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <a href="pengeluaran.php" class="btn btn-filter-reset"><i class="fa-solid fa-rotate-left me-1"></i> Reset</a>
             </div>
         </div>
+
+        <!-- Modern Search Row: Keterangan / Beban Kas -->
+        <div class="filter-search-row">
+            <div class="filter-search-group">
+                <label><i class="fa-solid fa-magnifying-glass me-1"></i> Cari Keterangan / Beban Kas</label>
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-search search-icon"></i>
+                    <input type="text" 
+                           name="search" 
+                           id="searchInputPengeluaran" 
+                           class="search-input-field" 
+                           placeholder="Ketik keterangan beban kas operasional, ID nota, atau nama item..." 
+                           value="<?= e($search); ?>" 
+                           onkeyup="filterPengeluaranTableLive(this.value)" 
+                           autocomplete="off">
+                    <?php if (!empty($search)): ?>
+                        <?php 
+                        $clear_params = [];
+                        if ($bulan !== '') $clear_params['bulan'] = $bulan;
+                        if (!empty($tahun)) $clear_params['tahun'] = $tahun;
+                        $clear_url = 'pengeluaran.php' . (!empty($clear_params) ? '?' . http_build_query($clear_params) : '');
+                        ?>
+                        <a href="<?= $clear_url; ?>" class="search-clear-btn" title="Hapus pencarian">&times;</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 
@@ -136,11 +184,11 @@ while ($row = mysqli_fetch_assoc($result)) {
 <div class="table-container">
     <div class="table-container-header">
         <h2><i class="fa-solid fa-receipt me-2 text-wine"></i> Daftar Transaksi Pengeluaran Kas</h2>
-        <span class="badge-count"><?= count($headers_data); ?> Record</span>
+        <span class="badge-count" id="recordCountBadge"><?= count($headers_data); ?> Record</span>
     </div>
 
     <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table align-middle" id="tablePengeluaran">
             <thead>
                 <tr>
                     <th width="85">ID Nota Kas</th>
@@ -157,7 +205,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                         $ket = $h['keterangan'] ?? $h['judul'] ?? 'Pengeluaran Kas Operasional';
                         if (empty(trim($ket))) $ket = 'Pengeluaran Kas Operasional';
                     ?>
-                        <tr>
+                        <tr class="pengeluaran-row" id="row-pengeluaran-<?= $h['id']; ?>">
                             <td data-label="ID Nota Kas">
                                 <span class="id-chip">#<?= e($h['custom_id']); ?></span>
                             </td>
@@ -200,11 +248,27 @@ while ($row = mysqli_fetch_assoc($result)) {
                             <div class="no-data">
                                 <i class="fa-solid fa-wallet"></i>
                                 <h5>Belum Ada Catatan Pengeluaran Kas</h5>
-                                <p class="text-muted">Tidak ada pengeluaran kas operasional yang tercatat untuk filter ini.</p>
+                                <p class="text-muted">Tidak ada pengeluaran kas operasional yang tercatat untuk filter atau kata kunci pencarian ini.</p>
+                                <?php if (!empty($search) || $bulan !== ''): ?>
+                                    <div class="mt-3">
+                                        <a href="pengeluaran.php" class="btn btn-filter-reset">
+                                            <i class="fa-solid fa-rotate-left me-1"></i> Reset Semua Filter
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
                 <?php endif; ?>
+                <tr id="noLiveSearchResult" style="display: none;">
+                    <td colspan="6" class="no-data-td text-center py-4">
+                        <div class="no-data">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <h5>Tidak Ada Hasil yang Cocok</h5>
+                            <p class="text-muted mb-0">Tidak ditemukan pengeluaran dengan kata kunci tersebut pada halaman ini.</p>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -229,6 +293,40 @@ while ($row = mysqli_fetch_assoc($result)) {
 </div>
 
 <script>
+function filterPengeluaranTableLive(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('tbody tr.pengeluaran-row');
+    const noResultRow = document.getElementById('noLiveSearchResult');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    if (noResultRow) {
+        if (rows.length > 0 && visibleCount === 0 && q) {
+            noResultRow.style.display = '';
+        } else {
+            noResultRow.style.display = 'none';
+        }
+    }
+
+    const badge = document.getElementById('recordCountBadge');
+    if (badge) {
+        if (q) {
+            badge.innerText = `${visibleCount} Hasil`;
+        } else {
+            badge.innerText = `<?= count($headers_data); ?> Record`;
+        }
+    }
+}
+
 function openDetailPengeluaranModal(id) {
     const modalBody = document.getElementById('detailPengeluaranModalBody');
     modalBody.innerHTML = `
