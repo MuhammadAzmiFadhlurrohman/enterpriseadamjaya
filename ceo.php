@@ -225,9 +225,206 @@ $status_text_map = [
 /* Executive Compact Layout Styles */
 .filter-bar-compact {
     background: #ffffff;
-    border: 1px solid rgba(122, 30, 51, 0.12) !important;
-    border-radius: 12px;
+    border: 1px solid rgba(122, 30, 51, 0.14) !important;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(10, 22, 40, 0.04);
+    position: relative;
+    overflow: hidden;
 }
+.filter-bar-compact::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #7A1E33 0%, #C9973E 100%);
+    border-radius: 4px 0 0 4px;
+}
+.filter-exec-form {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+}
+.filter-exec-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.filter-exec-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(122, 30, 51, 0.1) 0%, rgba(201, 151, 62, 0.16) 100%);
+    color: #7A1E33;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    border: 1px solid rgba(122, 30, 51, 0.12);
+    box-shadow: 0 2px 6px rgba(122, 30, 51, 0.06);
+}
+.filter-exec-title-box {
+    display: flex;
+    flex-direction: column;
+}
+.filter-exec-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #58101F;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+.filter-exec-subtitle {
+    font-size: 0.72rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    margin-top: 1px;
+}
+.live-dot-pulse {
+    display: inline-block;
+    width: 6.5px;
+    height: 6.5px;
+    border-radius: 50%;
+    background-color: #10b981;
+    margin-right: 5px;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+.filter-exec-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+.filter-pill-item {
+    display: inline-flex;
+    align-items: center;
+    background: #FAF8F6;
+    border: 1px solid rgba(122, 30, 51, 0.16);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.filter-pill-item:hover,
+.filter-pill-item:focus-within {
+    background: #ffffff;
+    border-color: #7A1E33;
+    box-shadow: 0 0 0 3px rgba(122, 30, 51, 0.08);
+}
+.filter-pill-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.65rem 0.42rem 0.8rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #58101F;
+    background: rgba(122, 30, 51, 0.04);
+    border-right: 1px solid rgba(122, 30, 51, 0.12);
+    white-space: nowrap;
+    user-select: none;
+}
+.filter-pill-select {
+    border: none !important;
+    background-color: transparent !important;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1E2430;
+    padding: 0.42rem 2.2rem 0.42rem 0.65rem;
+    cursor: pointer;
+    box-shadow: none !important;
+    min-width: 155px;
+    border-radius: 0 10px 10px 0;
+}
+.filter-pill-select:focus {
+    outline: none;
+}
+.filter-exec-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-filter-reset-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.42rem 0.9rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 10px;
+    background: #FAF8F6;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #555555;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.btn-filter-reset-pill:hover {
+    background: #7A1E33;
+    border-color: #7A1E33;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(122, 30, 51, 0.25);
+}
+.btn-filter-reset-pill:active {
+    transform: translateY(0);
+}
+@media (max-width: 991.98px) {
+    .filter-exec-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-exec-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .filter-pill-item {
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+    .filter-pill-select {
+        width: 100%;
+        min-width: auto;
+    }
+}
+@media (max-width: 640px) {
+    .filter-exec-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-pill-item {
+        width: 100%;
+    }
+    .filter-exec-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .btn-filter-reset-pill {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .exec-kpi-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -360,46 +557,59 @@ $status_text_map = [
 <!-- ========================================================
      BAR FILTER INTERAKTIF REALTIME (COMPACT & SLEEK)
      ======================================================== -->
-<div class="card border-0 shadow-sm mb-3 rounded-3 filter-bar-compact">
-    <div class="card-body py-2 px-3">
-        <form id="filterExecutiveForm" method="GET" action="ceo.php" class="d-flex align-items-center justify-content-between flex-wrap gap-2.5">
-            <div class="d-flex align-items-center gap-2">
-                <div class="d-inline-flex align-items-center justify-content-center rounded-2" style="width: 32px; height: 32px; background: rgba(122, 30, 51, 0.09); color: #7A1E33;">
-                    <i class="fa-solid fa-sliders fs-6"></i>
+<div class="card border-0 shadow-sm mb-3 filter-bar-compact">
+    <div class="card-body p-2 p-md-3">
+        <form id="filterExecutiveForm" method="GET" action="ceo.php" class="filter-exec-form" data-no-loader>
+            <!-- Left: Brand Title Header -->
+            <div class="filter-exec-header">
+                <div class="filter-exec-icon">
+                    <i class="fa-solid fa-sliders"></i>
                 </div>
-                <div>
-                    <span class="fw-bold text-wine d-block" style="font-size: 0.85rem; line-height: 1.15;">Filter Dashboard</span>
-                    <small class="text-muted" style="font-size: 0.7rem;">Kalkulasi Realtime KPI</small>
+                <div class="filter-exec-title-box">
+                    <span class="filter-exec-title">Filter Dashboard</span>
+                    <div class="filter-exec-subtitle">
+                        <span class="live-dot-pulse"></span>
+                        <span>Kalkulasi Realtime KPI</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center flex-wrap gap-2.5 ms-auto">
-                <div class="d-flex align-items-center gap-1.5">
-                    <label for="filterPeriode" class="small fw-semibold text-muted text-nowrap mb-0" style="font-size: 0.75rem;">
-                        <i class="fa-regular fa-calendar text-wine me-1"></i> Periode:
-                    </label>
-                    <select name="periode" id="filterPeriode" class="form-select form-select-sm fw-semibold border-secondary-subtle py-1" style="min-width: 165px; font-size: 0.78rem;" onchange="triggerFilterChange()">
+            <!-- Right: Filter Controls -->
+            <div class="filter-exec-controls">
+                <!-- Filter Periode Capsule -->
+                <div class="filter-pill-item">
+                    <span class="filter-pill-label">
+                        <i class="fa-regular fa-calendar-days text-wine"></i>
+                        <span>Periode</span>
+                    </span>
+                    <select name="periode" id="filterPeriode" class="form-select filter-pill-select" onchange="triggerFilterChange()">
                         <option value="bulan_ini" <?= $periode === 'bulan_ini' ? 'selected' : ''; ?>>Bulan Ini (<?= date('M Y'); ?>)</option>
                         <option value="tahun_ini" <?= $periode === 'tahun_ini' ? 'selected' : ''; ?>>Tahun Ini (<?= date('Y'); ?>)</option>
                         <option value="semua_waktu" <?= $periode === 'semua_waktu' ? 'selected' : ''; ?>>Sepanjang Waktu</option>
                     </select>
                 </div>
 
-                <div class="d-flex align-items-center gap-1.5">
-                    <label for="filterStatus" class="small fw-semibold text-muted text-nowrap mb-0" style="font-size: 0.75rem;">
-                        <i class="fa-solid fa-receipt text-wine me-1"></i> Status:
-                    </label>
-                    <select name="status" id="filterStatus" class="form-select form-select-sm fw-semibold border-secondary-subtle py-1" style="min-width: 175px; font-size: 0.78rem;" onchange="triggerFilterChange()">
+                <!-- Filter Status Capsule -->
+                <div class="filter-pill-item">
+                    <span class="filter-pill-label">
+                        <i class="fa-solid fa-receipt text-wine"></i>
+                        <span>Status</span>
+                    </span>
+                    <select name="status" id="filterStatus" class="form-select filter-pill-select" onchange="triggerFilterChange()">
                         <option value="semua" <?= $status_filter === 'semua' ? 'selected' : ''; ?>>Semua Transaksi</option>
                         <option value="lunas" <?= $status_filter === 'lunas' ? 'selected' : ''; ?>>Hanya Lunas (100%)</option>
                         <option value="piutang" <?= $status_filter === 'piutang' ? 'selected' : ''; ?>>Hanya Piutang / Cicilan</option>
                     </select>
                 </div>
 
-                <button type="button" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 text-muted fw-semibold" style="font-size: 0.75rem;" onclick="resetFilter()" title="Kembalikan ke Default">
-                    <i class="fa-solid fa-arrow-rotate-left me-1"></i> Reset
-                </button>
-                <div id="filterSpinner" class="spinner-border spinner-border-sm text-wine d-none" role="status" aria-hidden="true"></div>
+                <!-- Reset Button & Live Spinner -->
+                <div class="filter-exec-actions">
+                    <button type="button" class="btn-filter-reset-pill" onclick="resetFilter()" title="Kembalikan ke Default">
+                        <i class="fa-solid fa-arrow-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                    <div id="filterSpinner" class="spinner-border spinner-border-sm text-wine d-none" role="status" aria-hidden="true"></div>
+                </div>
             </div>
         </form>
     </div>
